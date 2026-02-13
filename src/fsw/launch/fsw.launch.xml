@@ -1,0 +1,44 @@
+<launch>
+  <!-- Guidance Node -->
+  <node
+    pkg="fsw"
+    exec="guidance_node"
+    name="guidance_node"
+    output="screen">
+
+    <!-- node parameters -->
+    <param name="loop_rate_hz" value="2.0"/>
+
+    <!-- target parameters-->
+    <param name="target_x" value="10.0"/>
+    <param name="target_y" value="15.0"/>
+    <param name="target_z" value="0.0"/>
+    <param name="target_qx" value="0.0"/>
+    <param name="target_qy" value="0.0"/>
+    <param name="target_qz" value="0.7071"/>
+    <param name="target_qw" value="0.7071"/>
+
+  </node>
+
+
+  <!-- Control Node -->
+  <node
+    pkg="fsw"
+    exec="control_node"
+    name="control_node"
+    output="screen">
+
+    <!-- node parameters -->
+    <param name="loop_rate_hz" value="8.0"/>
+
+    <!-- Controller Gains -->
+    <param name="linear_kp" value="0.16"/>
+    <param name="linear_kd" value="0.8"/>
+    <param name="linear_ki" value="0.0"/>
+
+    <param name="angular_kp" value="0.8"/>
+    <param name="angular_kd" value="0.16"/>
+    <param name="angular_ki" value="0.0"/>
+
+  </node>
+</launch>

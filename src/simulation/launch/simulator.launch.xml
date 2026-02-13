@@ -1,0 +1,63 @@
+<launch>
+  <node
+    pkg="simulation"
+    exec="simulator_node"
+    name="simulator_node"
+    output="screen">
+
+    <!-- state id-->
+    <param name="id" value="Test_bot"/>
+
+    <!-- simulator parameters -->
+    <param name="initial_time" value="0.0"/>
+    <param name="loop_rate_hz" value="8.0"/>
+
+    <!-- initial State -->
+    <param name="initial_x" value="0.0"/>
+    <param name="initial_y" value="0.0"/>
+    <param name="initial_z" value="0.0"/>
+    <param name="initial_vx" value="0.0"/>
+    <param name="initial_vy" value="0.0"/>
+    <param name="initial_vz" value="0.0"/>
+
+    <param name="initial_qx" value="0.0"/>
+    <param name="initial_qy" value="0.0"/>
+    <param name="initial_qz" value="0.0"/>
+    <param name="initial_qw" value="1.0"/>
+    <param name="initial_wx" value="0.0"/>
+    <param name="initial_wy" value="0.0"/>
+    <param name="initial_wz" value="0.0"/>
+
+    <!-- Dynamic parameters-->
+    <param name="mass" value="9.0877"/>
+    
+    <param name="inertia_xx" value="0.1454"/>
+    <param name="inertia_yy" value="0.1366"/>
+    <param name="inertia_zz" value="0.1594"/>
+    <param name="inertia_xy" value="0.0"/>
+    <param name="inertia_xz" value="0.0"/>
+    <param name="inertia_yz" value="0.0"/>
+
+    <!-- Hardware parameters-->
+    <param name="max_force" value="1.0"/>
+    <param name="max_torque" value="1.0"/>
+  </node>
+
+  <node
+    pkg="simulation"
+    exec="display_node"
+    name="display_node"
+    output="screen">
+
+    <!-- display parameters -->
+    <param name="loop_rate_hz" value="8.0"/>
+    
+  </node>
+
+  <node 
+    pkg="rviz2"
+    exec="rviz2"
+    name="rviz2"
+    output="screen"
+    args="-d $(find-pkg-share simulation)/resources/simple_simulation.rviz" />
+</launch>
