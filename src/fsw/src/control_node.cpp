@@ -27,6 +27,7 @@ Control::Control()
     this->declare_parameter("angular_kp", angular_kp_);
     this->declare_parameter("angular_kd", angular_kd_);
     this->declare_parameter("angular_ki", angular_ki_);
+    
     this->declare_parameter("mass", mass_);
 
     this->declare_parameter("inertia_xx", 1.0);

@@ -1,25 +1,28 @@
-1. terminator 설치 (미설치 시 아래의 launch.sh 이용 불가)
+1. terminator install (cannot use launch.sh without terminator)
 a) $ sudo apt update
 b) $ sudo apt install terminator
 
-2. RViz2 설치 (미설치 시 시각화 불가능)
+2. RViz2 install (cannot visualize without RViz2)
 a) $ sudo apt install ros-humble-rviz2
 b) $ sudo apt install ros-humble-rviz-2d-overlay-plugins
 c) $ sudo apt install ros-humble-rviz-2d-overlay-msgs
 
 3. Build
-a) ROS2 workspace의 src 폴더에 압축 파일 해제
-b) $ cd src/free_floating_simulation    (다수의 package로 구성하였기에 해당 폴더에서 작업 권장)
+a) unzip the given .tar.gz file within ROS2 workspace src folder
+b) $ cd src/free_floating_simulation
+   (recommended to work in independent repository; current project is composed of multiple packages)
 c) colcon build --symlink-install
 
-4. Execution (!!! free_floating_simulation 폴더에서 터미널 실행 !!!)
+4. Execution
+   (!!! execute the terminal within free_floating_simulation folder !!!)
 a) $ source install/setup.bash 
 b) $ bash launch.sh
-   자동으로 모든 노드 실행
+   will automatically launch all the packages, nodes
 
-5. 파라미터 수정 (VS Code 활용 권장)
-주) launch 파일 통해 연결되기에 파라미터 수정 후 Build 다시 할 필요 없음
-a) 유도/제어 파라미터 수정
-   /src/free_floating_simulation/src/fsw/launch/fsw.launch.xml 파일 열어서 수정
-b) 시뮬레이션 파라미터 수정
-   /src/free_floating_simulation/src/simulator/launch/simulator.launch.xml 파일 열어서 수정
+5. Changing Parameters (Recommended to use VS Code environment)
+Info) all the parameters are connected via launch.xml files
+      no need to re-build the packages after changing the parameters within launch files
+a) Guidance / Control parameters
+   open and modify : /src/free_floating_simulation/src/fsw/launch/fsw.launch.xml
+b) Simulation / Visualization parameters
+   open and modify : /src/free_floating_simulation/src/simulator/launch/simulator.launch.xml 파일 열어서 수정
