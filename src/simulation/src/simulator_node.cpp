@@ -300,7 +300,7 @@ void Simulator::GetParameters()
     Ixy, Iyy, Iyz,
     Ixz, Iyz, Izz;
 
-  //compute inverse inertia matrix
+  //compute inverse MOI matrix
   inertia_inv_ = inertia_.inverse();
 
   this->get_parameter("max_force", max_force_);

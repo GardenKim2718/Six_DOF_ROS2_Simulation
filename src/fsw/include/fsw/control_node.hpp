@@ -8,7 +8,7 @@
  * @date      2026-02-09 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-02-13 expanded by Chungwon Kim for 6-DOF control
  */
-
+#ifndef __control_node_hpp__
 #define __control_node_hpp__
 
 #include <rclcpp/rclcpp.hpp>
@@ -88,6 +88,9 @@ public:
     // Steady clock
     rclcpp::Clock steady_clock{RCL_STEADY_TIME};
 
+    // timer
+    rclcpp::TimerBase::SharedPtr t_run_node_;
+
     // input
     interfaces::msg::State last_state_;
     interfaces::msg::Guidance last_guidance_;
@@ -109,6 +112,15 @@ public:
     double angular_ki_ = 0.0;
     double angular_kd_ = 0.0;
 
+    // dynamic parameters
+    double mass_ = 1.0;
+    Eigen::Matrix3d inertia_ = Eigen::Matrix3d::Identity();
+    Eigen::Matrix3d inertia_inv_ = Eigen::Matrix3d::Identity();
+
+    // hardware limits
+    double max_force_ = 10.0;    // maximum force [N]
+    double max_torque_ = 10.0;   // maximum torque [N*m]
+
     // declare the additional variables for yourself
     bool b_simulator_initialized_ = false;
     bool b_guidance_initialized_ = false;
@@ -127,5 +139,7 @@ public:
     Eigen::Quaterniond err_quat_ = Eigen::Quaterniond::Identity();
     Eigen::Quaterniond prev_err_quat_ = Eigen::Quaterniond::Identity();
     Eigen::Vector3d err_ang_vel_ = Eigen::Vector3d::Zero();
-    Eigen::Vector3d integral_err_quat_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d integral_err_quat_ = Eigen::Vector3d::Zero();   // error quaternion vector part integration
 };
+
+#endif  // __control_node_hpp__
