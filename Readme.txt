@@ -22,7 +22,8 @@ b) $ bash launch.sh
 5. Changing Parameters (Recommended to use VS Code environment)
 Info) all the parameters are connected via launch.xml files
       no need to re-build the packages after changing the parameters within launch files
+Warning) make sure that dynamic & hardware parameters for fsw and simulation packages matches each other
 a) Guidance / Control parameters
    open and modify : /src/free_floating_simulation/src/fsw/launch/fsw.launch.xml
 b) Simulation / Visualization parameters
-   open and modify : /src/free_floating_simulation/src/simulator/launch/simulator.launch.xml 파일 열어서 수정
+   open and modify : /src/free_floating_simulation/src/simulator/launch/simulator.launch.xml

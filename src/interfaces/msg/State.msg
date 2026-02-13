@@ -1,4 +1,4 @@
-# State3D.msg
+# State.msg
 # ------------------------------------------------------------------
 # 3D full kinematic state for simulation and control.
 #

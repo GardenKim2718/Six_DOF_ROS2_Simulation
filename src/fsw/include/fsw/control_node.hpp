@@ -33,7 +33,7 @@ public:
   Control();
   ~Control();
 
-  void Init();
+  void Init(const interfaces::msg::State& initial_state);
   void Run();
   void GetParameters();
 
@@ -124,10 +124,10 @@ public:
     // declare the additional variables for yourself
     bool b_simulator_initialized_ = false;
     bool b_guidance_initialized_ = false;
+    bool b_control_initialized_ = false;
 
     rclcpp::Time sim_time_prev_;
     rclcpp::Time sim_time_curr_;
-    rclcpp::Time real_time_prev_;
 
     double time_dt_ = 0.0;
 

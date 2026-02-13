@@ -21,13 +21,14 @@ Control::Control()
     
     // Declare Parameters
     this->declare_parameter("loop_rate_hz", loop_rate_hz_);
+    
     this->declare_parameter("linear_kp", linear_kp_);
     this->declare_parameter("linear_kd", linear_kd_);
     this->declare_parameter("linear_ki", linear_ki_);
     this->declare_parameter("angular_kp", angular_kp_);
     this->declare_parameter("angular_kd", angular_kd_);
     this->declare_parameter("angular_ki", angular_ki_);
-    
+
     this->declare_parameter("mass", mass_);
 
     this->declare_parameter("inertia_xx", 1.0);
@@ -70,15 +71,6 @@ Control::Control()
     // Timer Initialization
     rclcpp::Time current_time = steady_clock.now();
 
-    // Wait for simulator and guidance initialization
-    while (rclcpp::ok() && (!b_simulator_initialized_ || !b_guidance_initialized_))
-    {
-        RCLCPP_INFO_THROTTLE(this->get_logger(), *get_clock(), 500,
-                    "Waiting for simulator and guidance initialization...");
-    }
-
-    Init();
-
     // Run Contol Loop
     t_run_node_ = this->create_wall_timer(
         std::chrono::milliseconds((int64_t)(1000 / loop_rate_hz_)),
@@ -92,7 +84,7 @@ Control::~Control()
 
 void Control::GetParameters()
 {
-    // This function can be used to fetch parameters when needed
+    // fetch parameters and store them in member variables
     this->get_parameter("loop_rate_hz", loop_rate_hz_);
     this->get_parameter("linear_kp", linear_kp_);
     this->get_parameter("linear_kd", linear_kd_);
@@ -123,18 +115,17 @@ void Control::GetParameters()
     inertia_inv_ = inertia_.inverse();
 }
 
-void Control::Init()
+void Control::Init(const interfaces::msg::State& initial_state)
 {
     // Log
     RCLCPP_INFO(this->get_logger(),
         "Starting Control Node Loop with loop_rate_hz=%.3f", loop_rate_hz_);
 
     // Initialize time
-    sim_time_prev_ = last_state_.header.stamp;
-    real_time_prev_ = steady_clock.now();
+    sim_time_prev_ = initial_state.header.stamp;
 
     // Initialize command message
-    o_command_.id = last_state_.id;
+    o_command_.id = initial_state.id;
     o_command_.force.x = 0.0;
     o_command_.force.y = 0.0;
     o_command_.force.z = 0.0;
@@ -145,26 +136,24 @@ void Control::Init()
 
 void Control::Run()
 {
-    // time
-    auto current_time = steady_clock.now();
-
-    // time interval
-    time_dt_ = (current_time - real_time_prev_).seconds();
-    if (time_dt_ <= 0.0) {
+    // handle initialization
+    if (!b_simulator_initialized_ || !b_guidance_initialized_) {
         RCLCPP_WARN(this->get_logger(),
-            "Non-positive time step detected: dt=%.6f. Skipping control update.", time_dt_);
+            "Waiting for simulator and guidance initialization...");
         return;
     }
-    else {
-        sim_time_curr_ = sim_time_prev_ + rclcpp::Duration::from_seconds(time_dt_);
+
+    if (!b_control_initialized_) {
+        Init(last_state_);
+        b_control_initialized_ = true;
     }
-    real_time_prev_ = current_time;
 
     // get subscribed state
     interfaces::msg::State current_state;
     {
         std::lock_guard<std::mutex> lock(mutex_state_);
         current_state = last_state_;
+        sim_time_curr_ = current_state.header.stamp;
     }
 
     // get subscribed guidance
@@ -173,6 +162,10 @@ void Control::Run()
         std::lock_guard<std::mutex> lock(mutex_state_);
         current_guidance = last_guidance_;
     }
+
+    // compute time step
+    time_dt_ = (sim_time_curr_ - sim_time_prev_).seconds();
+    sim_time_prev_ = sim_time_curr_;
 
     // attitude control
     Eigen::Quaterniond q_current(
@@ -242,14 +235,15 @@ void Control::Run()
     err_vel_ = speed_desired - speed_current;
     integral_err_pos_ += err_pos_ * time_dt_;
 
-    Eigen::Vector3d force_command_inertial;
-    force_command_inertial = linear_kp_ * err_pos_
-                            + linear_kd_ * err_vel_
-                            + linear_ki_ * integral_err_pos_;
+    Eigen::Vector3d acc_command_inertial;
+    acc_command_inertial = linear_kp_ * err_pos_
+                          + linear_kd_ * err_vel_
+                          + linear_ki_ * integral_err_pos_;
     
-    Eigen::Vector3d force_command_body;
-    Eigen::Matrix3d D_IB = q_current.toRotationMatrix();
-    force_command_body = D_IB.transpose() * force_command_inertial;
+    Eigen::Vector3d acc_command_body;
+    Eigen::Matrix3d D_I2B = q_current.toRotationMatrix();
+    acc_command_body = D_I2B * acc_command_inertial;
+    Eigen::Vector3d force_command_body = mass_ * acc_command_body;
 
     if (force_command_body.norm() > max_force_) {
         force_command_body = (force_command_body.normalized()) * max_force_;

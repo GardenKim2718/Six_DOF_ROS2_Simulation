@@ -1,4 +1,4 @@
-# Command3D.msg
+# Command.msg
 # ------------------------------------------------------------------
 # 3D force/torque command for spacecraft
 #
