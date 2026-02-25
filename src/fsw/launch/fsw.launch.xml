@@ -18,6 +18,20 @@
     <param name="target_qz" value="0.7071"/>
     <param name="target_qw" value="0.7071"/>
 
+    <!-- Dynamic Parameters -->
+    <param name="mass" value="9.0877"/>
+    
+    <param name="inertia_xx" value="0.1454"/>
+    <param name="inertia_yy" value="0.1366"/>
+    <param name="inertia_zz" value="0.1594"/>
+    <param name="inertia_xy" value="0.0"/>
+    <param name="inertia_xz" value="0.0"/>
+    <param name="inertia_yz" value="0.0"/>
+
+    <!-- Hardware Limits -->
+    <param name="max_force" value="1.0"/>
+    <param name="max_torque" value="1.0"/>
+
   </node>
 
   <!-- Control Node -->
