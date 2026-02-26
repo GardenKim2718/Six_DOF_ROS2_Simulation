@@ -5,8 +5,7 @@
  * @file      guidance_node.cpp
  * @brief     6-DOF guidance node source file
  *
- * @date      2026-02-09 created by Chungwon Kim (gardenkim@kaist.ac.kr)
- *            2026-02-13 expanded by Chungwon Kim for 6-DOF guidance
+ * @date      2026-02-26 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  */
 
 #include "fsw/guidance_node.hpp"
@@ -21,13 +20,14 @@ Guidance::Guidance()
     
     // Declare Parameters
     this->declare_parameter("loop_rate_hz", loop_rate_hz_);
-    
-    this->declare_parameter("linear_kp", linear_kp_);
-    this->declare_parameter("linear_kd", linear_kd_);
-    this->declare_parameter("linear_ki", linear_ki_);
-    this->declare_parameter("angular_kp", angular_kp_);
-    this->declare_parameter("angular_kd", angular_kd_);
-    this->declare_parameter("angular_ki", angular_ki_);
+
+    this->declare_parameter("target_x", target_x_);
+    this->declare_parameter("target_y", target_y_);
+    this->declare_parameter("target_z", target_z_);
+    this->declare_parameter("target_qx", target_qx_);
+    this->declare_parameter("target_qy", target_qy_);
+    this->declare_parameter("target_qz", target_qz_);
+    this->declare_parameter("target_qw", target_qw_);
 
     this->declare_parameter("mass", mass_);
 
@@ -48,21 +48,15 @@ Guidance::Guidance()
         "Control Node Parameters: loop_rate_hz=%.3f", loop_rate_hz_);
     
     RCLCPP_INFO(this->get_logger(),
-        "Linear control Gains: linear_kp=%.3f, linear_kd=%.3f, linear_ki=%.3f",
-        linear_kp_, linear_kd_, linear_ki_);
-    
-    RCLCPP_INFO(this->get_logger(),
-        "Angular control Gains: angular_kp=%.3f, angular_kd=%.3f, angular_ki=%.3f",
-        angular_kp_, angular_kd_, angular_ki_);
+        "Target State: position=(%.3f, %.3f, %.3f),
+        orientation(quaternion)=(%.3f, %.3f, %.3f, %.3f)",
+        target_x_, target_y_, target_z_,
+        target_qx_, target_qy_, target_qz_, target_qw_);
 
     // Subscribers Initialization
     sub_state_ = this->create_subscription<interfaces::msg::State>(
         "state", qos_profile,
         std::bind(&Guidance::CallbackState, this, std::placeholders::_1));
-
-    sub_guidance_ = this->create_subscription<interfaces::msg::Guidance>(
-        "guidance", qos_profile,
-        std::bind(&Guidance::CallbackGuidance, this, std::placeholders::_1));
 
     // Publishers Initialization
     pub_guidance_ = this->create_publisher<interfaces::msg::Command>(
@@ -86,12 +80,14 @@ void Guidance::GetParameters()
 {
     // fetch parameters and store them in member variables
     this->get_parameter("loop_rate_hz", loop_rate_hz_);
-    this->get_parameter("linear_kp", linear_kp_);
-    this->get_parameter("linear_kd", linear_kd_);
-    this->get_parameter("linear_ki", linear_ki_);
-    this->get_parameter("angular_kp", angular_kp_);
-    this->get_parameter("angular_kd", angular_kd_);
-    this->get_parameter("angular_ki", angular_ki_);
+
+    this->get_parameter("target_x", target_x_);
+    this->get_parameter("target_y", target_y_);
+    this->get_parameter("target_z", target_z_);
+    this->get_parameter("target_qx", target_qx_);
+    this->get_parameter("target_qy", target_qy_);
+    this->get_parameter("target_qz", target_qz_);
+    this->get_parameter("target_qw", target_qw_);
 
     this->get_parameter("mass", mass_);
 
@@ -124,28 +120,22 @@ void Guidance::Init(const interfaces::msg::State& initial_state)
     // Initialize time
     sim_time_prev_ = initial_state.header.stamp;
 
-    // Initialize command message
-    o_guidance_.id = initial_state.id;
-    o_guidance_.force.x = 0.0;
-    o_guidance_.force.y = 0.0;
-    o_guidance_.force.z = 0.0;
-    o_guidance_.torque.x = 0.0;
-    o_command_.torque.y = 0.0;
-    o_command_.torque.z = 0.0;
+    // Initialize guidance message
+    o_guidance_.header.stamp = initial_state.header.stamp;
 }
 
-void Control::Run()
+void Guidance::Run()
 {
     // handle initialization
-    if (!b_simulator_initialized_ || !b_guidance_initialized_) {
+    if (!b_simulator_initialized_) {
         RCLCPP_WARN(this->get_logger(),
-            "Waiting for simulator and guidance initialization...");
+            "Waiting for simulator initialization...");
         return;
     }
 
-    if (!b_control_initialized_) {
+    if (!b_guidance_initialized_) {
         Init(last_state_);
-        b_control_initialized_ = true;
+        b_guidance_initialized_ = true;
     }
 
     // get subscribed state
@@ -156,108 +146,34 @@ void Control::Run()
         sim_time_curr_ = current_state.header.stamp;
     }
 
-    // get subscribed guidance
-    interfaces::msg::Guidance current_guidance;
-    {
-        std::lock_guard<std::mutex> lock(mutex_state_);
-        current_guidance = last_guidance_;
-    }
-
     // compute time step
     time_dt_ = (sim_time_curr_ - sim_time_prev_).seconds();
     sim_time_prev_ = sim_time_curr_;
 
-    // attitude control
-    Eigen::Quaterniond q_current(
-        current_state.pose.orientation.w,
-        current_state.pose.orientation.x,
-        current_state.pose.orientation.y,
-        current_state.pose.orientation.z);
-    q_current.normalize();
+    // attitude guidance
+    err_quat_ = QuaternionSignCorrection(
+        Eigen::Quaterniond(
+            target_qw_, target_qx_, target_qy_, target_qz_) *
+        QuaternionConjugate(Eigen::Quaterniond(
+            current_state.pose.orientation.w,
+            current_state.pose.orientation.x,
+            current_state.pose.orientation.y,
+            current_state.pose.orientation.z)));
 
-    Eigen::Vector3d w_current(
+    man_angle_ = 2.0 * std::acos(err_quat_.w());
+    eigen_vec_ = Eigen::Vector3d(err_quat_.x(), err_quat_.y(), err_quat_.z());
+    eigen_vec_.normalize();
+
+    ang_vel_curr_ = Eigen::Vector3d(
         current_state.vel.angular.x,
         current_state.vel.angular.y,
         current_state.vel.angular.z);
 
-    Eigen::Quaterniond q_desired(
-        current_guidance.pose.orientation.w,
-        current_guidance.pose.orientation.x,
-        current_guidance.pose.orientation.y,
-        current_guidance.pose.orientation.z);
-    q_desired.normalize();
+    // angular acceleration limit (approximate)
+    Eigen::Vector3d I_e_product_ = inertia_ * eigen_vec_;
+    double ang_acc_limit = 0.8 * max_torque_ / I_e_product_.norm();
 
-    Eigen::Vector3d w_desired(
-        current_guidance.vel.angular.x,
-        current_guidance.vel.angular.y,
-        current_guidance.vel.angular.z);
-
-    err_quat_ = QuaternionSignCorrection(q_desired * QuaternionConjugate(q_current));
-    Eigen::Vector3d err_quat_vec(
-        err_quat_.x(), err_quat_.y(), err_quat_.z());
     
-    err_ang_vel_ = w_desired - w_current;
-    integral_err_quat_ += Eigen::Vector3d(
-        err_quat_.x(), err_quat_.y(), err_quat_.z()) * time_dt_;
-    
-    Eigen::Vector3d torque_command;
-    torque_command = angular_kp_ * err_quat_vec
-                     + angular_kd_ * err_ang_vel_
-                     + angular_ki_ * integral_err_quat_
-                     - w_current.cross(inertia_ * w_current);
-
-    if (torque_command.norm() > max_torque_) {
-        torque_command = (torque_command.normalized()) * max_torque_;
-    }
-
-    // linear control
-    Eigen::Vector3d pos_current(
-        current_state.pose.position.x,
-        current_state.pose.position.y,
-        current_state.pose.position.z);
-    
-    Eigen::Vector3d speed_current(
-        current_state.vel.linear.x,
-        current_state.vel.linear.y,
-        current_state.vel.linear.z);
-    
-    Eigen::Vector3d pos_desired(
-        current_guidance.pose.position.x,
-        current_guidance.pose.position.y,
-        current_guidance.pose.position.z);
-    
-    Eigen::Vector3d speed_desired(
-        current_guidance.vel.linear.x,
-        current_guidance.vel.linear.y,
-        current_guidance.vel.linear.z);
-
-    err_pos_ = pos_desired - pos_current;
-    err_vel_ = speed_desired - speed_current;
-    integral_err_pos_ += err_pos_ * time_dt_;
-
-    Eigen::Vector3d acc_command_inertial;
-    acc_command_inertial = linear_kp_ * err_pos_
-                          + linear_kd_ * err_vel_
-                          + linear_ki_ * integral_err_pos_;
-    
-    Eigen::Vector3d acc_command_body;
-    Eigen::Matrix3d D_I2B = q_current.toRotationMatrix();
-    acc_command_body = D_I2B * acc_command_inertial;
-    Eigen::Vector3d force_command_body = mass_ * acc_command_body;
-
-    if (force_command_body.norm() > max_force_) {
-        force_command_body = (force_command_body.normalized()) * max_force_;
-    }
-
-    // publish command
-    o_command_.id = current_state.id;
-    o_command_.force.x = force_command_body.x();
-    o_command_.force.y = force_command_body.y();
-    o_command_.force.z = force_command_body.z();
-    o_command_.torque.x = torque_command.x();
-    o_command_.torque.y = torque_command.y();
-    o_command_.torque.z = torque_command.z();
-    pub_command_->publish(o_command_);
 }
 
 int main(int argc, char ** argv)

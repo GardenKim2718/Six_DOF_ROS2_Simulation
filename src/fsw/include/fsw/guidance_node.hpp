@@ -5,8 +5,7 @@
  * @file      guidance_node.hpp
  * @brief     6-DOF guidance node header file
  *
- * @date      2026-02-09 created by Chungwon Kim (gardenkim@kaist.ac.kr)
- *            2026-02-13 expanded by Chungwon Kim for 6-DOF control
+ * @date      2026-02-26 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  */
 #ifndef __guidance_node_hpp__
 #define __guidance_node_hpp__
@@ -113,6 +112,7 @@ public:
 
     // declare the additional variables for yourself
     bool b_simulator_initialized_ = false;
+    bool b_guidance_initialized_ = false;
 
     rclcpp::Time sim_time_prev_;
     rclcpp::Time sim_time_curr_;
@@ -124,10 +124,13 @@ public:
     Eigen::Vector3d prev_err_pos_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d integral_err_pos_ = Eigen::Vector3d::Zero();
 
+    Eigen::Quaterniond quat_curr_ = Eigen::Quaterniond::Identity();
+    Eigen::Quaterniond quat_des_ = Eigen::Quaterniond::Identity();
     Eigen::Quaterniond err_quat_ = Eigen::Quaterniond::Identity();
-    Eigen::Quaterniond prev_err_quat_ = Eigen::Quaterniond::Identity();
-    Eigen::Vector3d err_ang_vel_ = Eigen::Vector3d::Zero();
-    Eigen::Vector3d integral_err_quat_ = Eigen::Vector3d::Zero();   // error quaternion vector part integration
+
+    Eigen::Vector3d eigen_vec_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d ang_vel_curr_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d ang_vel_des_ = Eigen::Vector3d::Zero();
 };
 
 #endif  // __guidance_node_hpp__
