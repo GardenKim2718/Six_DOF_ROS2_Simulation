@@ -7,6 +7,7 @@
  *
  * @date      2026-02-26 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  */
+
 #ifndef __guidance_node_hpp__
 #define __guidance_node_hpp__
 
@@ -69,6 +70,7 @@ public:
 
     // topics
     rclcpp::Publisher<interfaces::msg::Command>::SharedPtr pub_guidance_;
+    rclcpp::Publisher<interfaces::msg::Target>::SharedPtr pub_target_;
     rclcpp::Subscription<interfaces::msg::State>::SharedPtr sub_state_;  
 
     // mutex
@@ -85,6 +87,7 @@ public:
 
     // output
     interfaces::msg::Command o_guidance_;
+    interfaces::msg::Target o_target_;
 
     // time
     double time_prev_{0.0};
@@ -96,10 +99,19 @@ public:
     double target_x_ = 0.0;
     double target_y_ = 0.0;
     double target_z_ = 0.0;
+
+    double target_vx_ = 0.0;
+    double target_vy_ = 0.0;
+    double target_vz_ = 0.0;
+
     double target_qx_ = 0.0;
     double target_qy_ = 0.0;
     double target_qz_ = 0.0;
     double target_qw_ = 1.0;
+
+    double target_wx_ = 0.0;
+    double target_wy_ = 0.0;
+    double target_wz_ = 0.0;
 
     // dynamic parameters
     double mass_ = 1.0;
@@ -110,7 +122,14 @@ public:
     double max_force_ = 10.0;    // maximum force [N]
     double max_torque_ = 10.0;   // maximum torque [N*m]
 
-    // declare the additional variables for yourself
+    // guidance parameters
+    double T_go_linear_ = 5.0;   // time-to-go for linear guidance [s]
+    double linear_KR_ = 6.0;   // linear guidance gain
+    double linear_KV_ = 4.0;   // linear guidance gain
+    
+    double T_go_rotational_ = 5.0;   // time-to-go for rotational guidance [s]
+
+    // declare additional variables for yourself
     bool b_simulator_initialized_ = false;
     bool b_guidance_initialized_ = false;
 
@@ -119,14 +138,23 @@ public:
 
     double time_dt_ = 0.0;
 
+    Eigen::Vector3d target_pos_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d target_speed_ = Eigen::Vector3d::Zero();
+    Eigen::Quaterniond target_quat_ = Eigen::Quaterniond::Identity();
+    Eigen::Vector3d target_ang_vel_ = Eigen::Vector3d::Zero();
+
+    Eigen::Vector3d curr_pos_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d curr_speed_ = Eigen::Vector3d::Zero();
+    Eigen::Quaterniond curr_quat_ = Eigen::Quaterniond::Identity();
+    Eigen::Vector3d curr_ang_speed_ = Eigen::Vector3d::Zero();
+
     Eigen::Vector3d err_pos_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d err_vel_ = Eigen::Vector3d::Zero();
-    Eigen::Vector3d prev_err_pos_ = Eigen::Vector3d::Zero();
-    Eigen::Vector3d integral_err_pos_ = Eigen::Vector3d::Zero();
 
     Eigen::Quaterniond quat_curr_ = Eigen::Quaterniond::Identity();
     Eigen::Quaterniond quat_des_ = Eigen::Quaterniond::Identity();
     Eigen::Quaterniond err_quat_ = Eigen::Quaterniond::Identity();
+    Eigen::Vector3d err_ang_vel_ = Eigen::Vector3d::Zero();
 
     Eigen::Vector3d eigen_vec_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d ang_vel_curr_ = Eigen::Vector3d::Zero();

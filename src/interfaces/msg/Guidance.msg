@@ -18,3 +18,7 @@ geometry_msgs/Pose pose  # pose.position.x/y/z  [m]
 # 3D velocity = linear (m/s) + angular (rad/s)
 geometry_msgs/Twist vel  # vel.linear.x/y/z   [m/s]
                          # vel.angular.x/y/z  [rad/s]
+
+# 3D acceleration = linear (m/s^2) + angular (rad/s^2)
+geometry_msgs/Accel accel # accel.linear.x/y/z   [m/s^2]
+                          # accel.angular.x/y/z  [rad/s^2]

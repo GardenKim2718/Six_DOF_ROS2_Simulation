@@ -6,7 +6,7 @@
     output="screen">
 
     <!-- state id-->
-    <param name="id" value="Test_bot"/>
+    <param name="id" value="Ego"/>
 
     <!-- simulator parameters -->
     <param name="initial_time" value="0.0"/>

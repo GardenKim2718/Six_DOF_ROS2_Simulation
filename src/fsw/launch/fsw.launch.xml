@@ -7,16 +7,23 @@
     output="screen">
 
     <!-- node parameters -->
-    <param name="loop_rate_hz" value="2.0"/>
+    <param name="loop_rate_hz" value="8.0"/>
 
     <!-- target parameters-->
     <param name="target_x" value="10.0"/>
     <param name="target_y" value="15.0"/>
     <param name="target_z" value="0.0"/>
+    <param name="target_vx" value="0.0"/>
+    <param name="target_vy" value="0.0"/>
+    <param name="target_vz" value="0.0"/>
+
     <param name="target_qx" value="0.0"/>
     <param name="target_qy" value="0.0"/>
     <param name="target_qz" value="0.7071"/>
     <param name="target_qw" value="0.7071"/>
+    <param name="target_wx" value="0.0"/>
+    <param name="target_wy" value="0.0"/>
+    <param name="target_wz" value="0.0"/>
 
     <!-- Dynamic Parameters -->
     <param name="mass" value="9.0877"/>

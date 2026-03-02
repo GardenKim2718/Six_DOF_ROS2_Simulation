@@ -15,3 +15,7 @@ std_msgs/Header header   # header.stamp : simulation time
 # 3D pose = position (m) + orientation quaternion (unit quaternion)
 geometry_msgs/Pose pose  # pose.position.x/y/z  [m]
                          # pose.orientation.x/y/z/w  (unit quaternion)
+
+# 3D velocity = linear (m/s) + angular (rad/s)
+geometry_msgs/Twist vel  # vel.linear.x/y/z   [m/s]
+                         # vel.angular.x/y/z  [rad/s]

@@ -18,6 +18,9 @@ Display::Display(double &loop_rate_hz_)
     //QoS settings
     auto qos_profile = rclcpp::QoS(rclcpp::KeepLast(10));
     
+    // TF2 broadcaster
+    tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(*this);
+
     // Declare Parameters
     this->declare_parameter<double>("loop_rate_hz", 100.0);
 
@@ -201,6 +204,23 @@ void Display::DisplayState(const rclcpp::Time& time,
     speed_marker.color.b = 1.0;
 
     pub_speed_marker_->publish(speed_marker);
+
+    // Broadcast TF for the ego frame
+    geometry_msgs::msg::TransformStamped tf_state;
+    tf_state.header.stamp = time;
+    tf_state.header.frame_id = state.header.frame_id;   // e.g., "world"
+    tf_state.child_frame_id  = state.id + "_frame";     // e.g., "ego_frame"
+
+    tf_state.transform.translation.x = state.pose.position.x;
+    tf_state.transform.translation.y = state.pose.position.y;
+    tf_state.transform.translation.z = state.pose.position.z;
+
+    tf_state.transform.rotation.x = state.pose.orientation.x;
+    tf_state.transform.rotation.y = state.pose.orientation.y;
+    tf_state.transform.rotation.z = state.pose.orientation.z;
+    tf_state.transform.rotation.w = state.pose.orientation.w;
+
+    tf_broadcaster_->sendTransform(tf_state);
 }
 
 void Display::DisplayTarget(const rclcpp::Time& time,
@@ -256,6 +276,23 @@ void Display::DisplayTarget(const rclcpp::Time& time,
     target_marker.color.b = 1.0;
 
     pub_target_marker_->publish(target_marker);
+
+    // Broadcast TF for the target frame
+    geometry_msgs::msg::TransformStamped tf_target;
+    tf_target.header.stamp = time;
+    tf_target.header.frame_id = target.header.frame_id;   // e.g., "world"
+    tf_target.child_frame_id  = target.id + "_target_frame";
+
+    tf_target.transform.translation.x = target.pose.position.x;
+    tf_target.transform.translation.y = target.pose.position.y;
+    tf_target.transform.translation.z = target.pose.position.z;
+
+    tf_target.transform.rotation.x = target.pose.orientation.x;
+    tf_target.transform.rotation.y = target.pose.orientation.y;
+    tf_target.transform.rotation.z = target.pose.orientation.z;
+    tf_target.transform.rotation.w = target.pose.orientation.w;
+
+    tf_broadcaster_->sendTransform(tf_target);
 }
 
 int main(int argc, char ** argv)
