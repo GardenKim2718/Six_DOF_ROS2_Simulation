@@ -204,21 +204,47 @@ void Guidance::Run()
     //----------------------Linear Guidance Logic ---------------------------//
     // Based on Apollo Powered Descent Guidance
     // modified for zero-G environment
+    Eigen::Vector3d x0 = Eigen::Vector3d(
+        current_state.pose.position.x,
+        current_state.pose.position.y,
+        current_state.pose.position.z);
+    Eigen::Vector3d v0 = Eigen::Vector3d(
+        current_state.vel.linear.x,
+        current_state.vel.linear.y,
+        current_state.vel.linear.z);
+    Eigen::Vector3d xf = Eigen::Vector3d(
+        o_target_.pose.position.x,
+        o_target_.pose.position.y,
+        o_target_.pose.position.z);
+    Eigen::Vector3d vf = Eigen::Vector3d(
+        o_target_.vel.linear.x,
+        o_target_.vel.linear.y,
+        o_target_.vel.linear.z);
 
     // linear acceleration limit (approximate, with 15% margin)
     double acc_limit_ = 0.85 * max_force_ / mass_;
 
-    T_go_linear_ = T_go_linear_ - time_dt_;   // decrement time-to-go guess by time step
+    if (!b_linear_guidance_initialized_)
+    {
+        FindTimeToGoLinear(x0, xf, v0, vf, acc_limit_);
+        b_linear_guidance_initialized_ = true;
+    } else
+    {
+        T_go_linear_ = T_go_linear_ - time_dt_;   // decrement time-to-go guess by time step
+        if (T_go_linear_ < T_go_linear_min_)
+        {
+            b_linear_guidance_active_ = false;
+            RCLCPP_WARN(this->get_logger(),
+                "Deactivating linear guidance, Time to Go : %.3f s", T_go_linear_min_);
+        }
+    }
 
     if (b_linear_guidance_active_){
-        LinearGuidance(current_state, o_target_, T_go_linear_, acc_limit_,
-            accel_cmd_, b_linear_guidance_active_);
+        LinearGuidance(x0, xf, v0, vf, T_go_linear_, accel_cmd_);
     } else {
         accel_cmd_ = Eigen::Vector3d::Zero();
     }
-
     //-------------------end of linear guidance logic------------------------//
-
 
     //--------------------Rotational Guidance Logic -------------------------//
     // attitude error
@@ -247,8 +273,10 @@ void Guidance::Run()
     double ang_acc_limit = 0.6 * max_torque_ / I_e_.norm();
 
     if (b_angular_guidance_active_){
-        AngularGuidance(current_state, o_target_, T_go_angular_, ang_acc_limit,
-            ang_accel_cmd_, b_angular_guidance_active_);
+        AngularGuidance(
+            err_quat_, curr_ang_speed_, target_ang_vel_,
+            T_go_angular_, ang_acc_limit, ang_accel_cmd_, b_angular_guidance_active_
+        );
     } else {
         ang_accel_cmd_ = Eigen::Vector3d::Zero();
     }
@@ -272,57 +300,45 @@ void Guidance::Run()
 }
 
 void Guidance::LinearGuidance(
-    const interfaces::msg::State& current_state,
-    const interfaces::msg::Target& target_state,
-    double& T_go_linear_, const double acc_limit_,
-    Eigen::Vector3d& accel_cmd_,
-    bool &b_linear_guidance_active_)
+    const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
+    const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
+    double& T_go_linear_, Eigen::Vector3d& accel_cmd_)
 {   
     // based the Apollo Powered Descent Guidance (APDG)
-    // iterate until the trajectory does not exceed the acceleration limit
+    // compute reference acceleration command with time-to-go
+    RCLCPP_INFO(this->get_logger(),
+        "Time to Go for Linear Guidance: %.3f s", T_go_linear_);
+    accel_cmd_ = 6.0 * (xf - x0 - v0 * T_go_linear_) / (T_go_linear_ * T_go_linear_) - 
+                 2.0 * (vf - v0) / T_go_linear_;
+}
 
-    Eigen::Vector3d x0 = Eigen::Vector3d(
-        current_state.pose.position.x,
-        current_state.pose.position.y,
-        current_state.pose.position.z);
-    Eigen::Vector3d v0 = Eigen::Vector3d(
-        current_state.vel.linear.x,
-        current_state.vel.linear.y,
-        current_state.vel.linear.z);
-    Eigen::Vector3d xf = Eigen::Vector3d(
-        target_state.pose.position.x,
-        target_state.pose.position.y,
-        target_state.pose.position.z);
-    Eigen::Vector3d vf = Eigen::Vector3d(
-        target_state.vel.linear.x,
-        target_state.vel.linear.y,
-        target_state.vel.linear.z);
-    Eigen::Vector3d err_vel = Eigen::Vector3d(
-        target_state.vel.linear.x - current_state.vel.linear.x,
-        target_state.vel.linear.y - current_state.vel.linear.y,
-        target_state.vel.linear.z - current_state.vel.linear.z);
-
-    // running bisection method to find the time-to-go that satisfies the acceleration limit
-    double Tgo_guess_ = T_go_linear_;
-    double Tgo_guess2_ = T_go_linear_;
+void Guidance::FindTimeToGoLinear(
+    const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
+    const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
+    const double acc_limit)
+{
+    // compute time-to-go for linear guidance with the formula from Apollo Powered Descent Guidance
+    // use bisection method to find the time-to-go that satisfies the acceleration limit
+    double Tgo_guess = T_go_linear_;
+    double Tgo_guess2 = T_go_linear_;
     
     const double Tgo_delta_ = 2.0;   // time-to-go adjustment step [s]
-    const double Tgo_tol = 0.1;       // time-to-go convergence tolerance [s]
+    const double Tgo_tol = 0.1;      // time-to-go convergence tolerance [s]
 
     bool Tgo_converged = false;
     bool Guess1_ = false;
     bool Guess2_ = false;
     
-    Guess1_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess_, acc_limit_);
+    Guess1_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess, acc_limit);
     Guess2_ = Guess1_;
 
     while (Guess2_ == Guess1_)
     {
         if (Guess1_)
         {
-            Tgo_guess2_ = Tgo_guess2_ - Tgo_delta_;
+            Tgo_guess2 = Tgo_guess2 - Tgo_delta_;
 
-            if (Tgo_guess2_ < T_go_linear_min_){
+            if (Tgo_guess2 < T_go_linear_min_){
                 Tgo_converged = true;
                 b_linear_guidance_active_ = false;
 
@@ -334,58 +350,54 @@ void Guidance::LinearGuidance(
             }
         } else
         {
-            Tgo_guess2_ = Tgo_guess2_ + Tgo_delta_;
+            Tgo_guess2 = Tgo_guess2 + Tgo_delta_;
         }
-        Guess2_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess2_, acc_limit_);
+        Guess2_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess2, acc_limit);
     }
 
     while (!Tgo_converged)
     {
-        double Tgo_guess_mid_ = 0.5 * (Tgo_guess_ + Tgo_guess2_);
-        Guess1_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess_mid_, acc_limit_);
+        double Tgo_guess_mid_ = 0.5 * (Tgo_guess + Tgo_guess2);
+        Guess1_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess_mid_, acc_limit);
 
-        if (abs(Tgo_guess_ - Tgo_guess2_) < Tgo_tol){
+        if (abs(Tgo_guess - Tgo_guess2) < Tgo_tol){
             Tgo_converged = true;
             T_go_linear_ = Tgo_guess_mid_;
         }
 
         if (Guess1_){
-            Tgo_guess2_ = Tgo_guess_mid_;
+            Tgo_guess2 = Tgo_guess_mid_;
         } else {
-            Tgo_guess_ = Tgo_guess_mid_;
+            Tgo_guess = Tgo_guess_mid_;
         }
     }
-
-    // compute reference acceleration command with the converged time-to-go
-    // (inertial frame)
-    accel_cmd_ = 6.0 * (xf - x0 - v0 * T_go_linear_) / (T_go_linear_ * T_go_linear_) - 
-                 2.0 * (vf - v0) / T_go_linear_;
+    RCLCPP_INFO(this->get_logger(),
+        "Time to Go for Linear Guidance: %.3f s", T_go_linear_);
 }
 
 bool Guidance::ApolloPoweredDescentGuidanceValidate(
         const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
         const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
-        const double T_go_, const double acc_limit_)
+        const double T_go, const double acc_limit)
 {
     // checking whether the given Tgo satisfies the acceleration limit for the given state error
-    Eigen::Vector3d c0 = 6.0 * (xf - x0 - v0 * T_go_) / (T_go_ * T_go_) - 
-                        2.0 * (vf - v0) / T_go_;
-    Eigen::Vector3d c1 = 6.0 * (vf - v0) / (T_go_ * T_go_) - 12.0 * (xf - x0 - v0 * T_go_) / (T_go_ * T_go_ * T_go_);
+    Eigen::Vector3d c0 = 6.0 * (xf - x0 - v0 * T_go) / (T_go * T_go) - 
+                        2.0 * (vf - v0) / T_go;
+    Eigen::Vector3d c1 = 6.0 * (vf - v0) / (T_go * T_go) - 12.0 * (xf - x0 - v0 * T_go) / (T_go * T_go * T_go);
 
     // check for maximum acceleration magnitude
     double max_acc_cand1 = c0.norm();
-    double max_acc_cand2 = (c0 + c1 * T_go_).norm();
+    double max_acc_cand2 = (c0 + c1 * T_go).norm();
     double max_acc = std::max(max_acc_cand1, max_acc_cand2);
 
-    return max_acc < acc_limit_;
+    return max_acc < acc_limit;
 }
 
 void Guidance::AngularGuidance(
-    const interfaces::msg::State &current_state,
-    const interfaces::msg::Target &target_state,
+    const Eigen::Quaterniond err_quat,
+    const Eigen::Vector3d curr_ang_speed, const Eigen::Vector3d target_ang_vel,
     double &T_go_angular_, const double ang_acc_limit_,
-    Eigen::Vector3d &ang_accel_cmd_,
-    bool &b_angular_guidance_active_)
+    Eigen::Vector3d &ang_accel_cmd_, bool &b_angular_guidance_active_)
 {
     // based on Apollo Powered Descent Guidance application on attitude guidance
     // see for below paper for details:
@@ -393,8 +405,9 @@ void Guidance::AngularGuidance(
     // modified for Quaternion attitude representation by Chungwon Kim
 
     // create target angular acceleration with PD control
-    Eigen::Vector3d err_quat_vec_ = Eigen::Vector3d(err_quat_.x(), err_quat_.y(), err_quat_.z());
-    Eigen::Vector3d ang_accel_tgt_ = angular_kp_ * err_quat_vec_ + angular_kd_ * err_ang_vel_;
+    Eigen::Vector3d err_quat_vec = Eigen::Vector3d(err_quat.x(), err_quat.y(), err_quat.z());
+    Eigen::Vector3d err_ang_vel = target_ang_vel - curr_ang_speed;
+    Eigen::Vector3d ang_accel_tgt_ = angular_kp_ * err_quat_vec + angular_kd_ * err_ang_vel;
 
     // set T_go for angular guidance with T_go from linear guidance (temporary)
     T_go_angular_ = T_go_linear_ * 0.8;
@@ -405,8 +418,8 @@ void Guidance::AngularGuidance(
     }
 
     // compute angular acceleration command (body frame)
-    ang_accel_cmd_ = 12.0 * err_quat_vec_ / (T_go_angular_ * T_go_angular_) + 
-                     6.0 * (target_ang_vel_ - curr_ang_speed_) / T_go_angular_ + 
+    ang_accel_cmd_ = 12.0 * err_quat_vec / (T_go_angular_ * T_go_angular_) + 
+                     6.0 * err_ang_vel / T_go_angular_ + 
                      ang_accel_tgt_;
 }
 
