@@ -183,7 +183,7 @@ void Control::Run()
     b_linear_guidance_active_ = current_guidance.linear_guidance_active;
     b_angular_guidance_active_ = current_guidance.angular_guidance_active;
 
-    //----------------------Attitude Control--------------------------//
+    //-----------------------Attitude Control-------------------------//
     Eigen::Quaterniond q_current(
         current_state.pose.orientation.w,
         current_state.pose.orientation.x,
@@ -257,15 +257,12 @@ void Control::Run()
     Eigen::Vector3d acc_command_inertial;
     Eigen::Vector3d acc_command_body;
 
-    Eigen::Matrix3d D_I2B = q_current.toRotationMatrix();
-
     if (b_linear_guidance_active_)
     {
         acc_command_inertial = Eigen::Vector3d(
             current_guidance.accel.linear.x,
             current_guidance.accel.linear.y,
             current_guidance.accel.linear.z);
-        acc_command_body = D_I2B * acc_command_inertial;
     } else
     {
         Eigen::Vector3d pos_desired(
@@ -284,11 +281,11 @@ void Control::Run()
 
         acc_command_inertial = linear_kp_ * err_pos_
                             + linear_kd_ * err_vel_
-                            + linear_ki_ * integral_err_pos_;
-        
-        acc_command_body = D_I2B * acc_command_inertial;
+                            + linear_ki_ * integral_err_pos_;        
     }
 
+    Eigen::Matrix3d D_I2B = q_current.toRotationMatrix();
+    acc_command_body = D_I2B * acc_command_inertial;
     Eigen::Vector3d force_command_body = mass_ * acc_command_body;
 
     if (force_command_body.norm() > max_force_) {

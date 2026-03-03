@@ -19,8 +19,8 @@
 
     <param name="target_qx" value="0.0"/>
     <param name="target_qy" value="0.0"/>
-    <param name="target_qz" value="0.7071"/>
-    <param name="target_qw" value="0.7071"/>
+    <param name="target_qz" value="0.6"/>
+    <param name="target_qw" value="0.8"/>
     <param name="target_wx" value="0.0"/>
     <param name="target_wy" value="0.0"/>
     <param name="target_wz" value="0.0"/>

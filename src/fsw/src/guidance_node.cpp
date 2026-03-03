@@ -210,8 +210,13 @@ void Guidance::Run()
 
     T_go_linear_ = T_go_linear_ - time_dt_;   // decrement time-to-go guess by time step
 
-    LinearGuidance(current_state, o_target_, T_go_linear_, acc_limit_,
-        accel_cmd_, b_linear_guidance_active_);
+    if (b_linear_guidance_active_){
+        LinearGuidance(current_state, o_target_, T_go_linear_, acc_limit_,
+            accel_cmd_, b_linear_guidance_active_);
+    } else {
+        accel_cmd_ = Eigen::Vector3d::Zero();
+    }
+
     //-------------------end of linear guidance logic------------------------//
 
 
@@ -241,8 +246,12 @@ void Guidance::Run()
     Eigen::Vector3d I_e_ = inertia_ * eigen_vec_;
     double ang_acc_limit = 0.6 * max_torque_ / I_e_.norm();
 
-    AngularGuidance(current_state, o_target_, T_go_angular_, ang_acc_limit,
-        ang_accel_cmd_, b_angular_guidance_active_);
+    if (b_angular_guidance_active_){
+        AngularGuidance(current_state, o_target_, T_go_angular_, ang_acc_limit,
+            ang_accel_cmd_, b_angular_guidance_active_);
+    } else {
+        ang_accel_cmd_ = Eigen::Vector3d::Zero();
+    }
     //--------------end of rotational guidance logic------------------------//
 
     // publish guidance command
@@ -394,7 +403,7 @@ void Guidance::AngularGuidance(
 
     // compute angular acceleration command (body frame)
     ang_accel_cmd_ = 12.0 * err_quat_vec_ / (T_go_angular_ * T_go_angular_) + 
-                     6.0 * (curr_ang_speed_ + target_ang_vel_) / T_go_angular_ + 
+                     6.0 * (target_ang_vel_ - curr_ang_speed_) / T_go_angular_ + 
                      ang_accel_tgt_;
 }
 

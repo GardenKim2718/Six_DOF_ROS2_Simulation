@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Axes1
       Splitter Ratio: 0.5
     Tree Height: 555
   - Class: rviz_common/Selection
@@ -29,24 +30,6 @@ Panels:
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.5
-      Cell Size: 1
-      Class: rviz_default_plugins/Grid
-      Color: 160; 160; 164
-      Enabled: true
-      Line Style:
-        Line Width: 0.029999999329447746
-        Value: Lines
-      Name: Grid
-      Normal Cell Count: 0
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Plane: XY
-      Plane Cell Count: 10
-      Reference Frame: <Fixed Frame>
-      Value: true
     - Class: rviz_default_plugins/Marker
       Enabled: true
       Name: Marker
@@ -85,6 +68,13 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /speed_marker
+      Value: true
+    - Class: rviz_default_plugins/Axes
+      Enabled: true
+      Length: 2
+      Name: Axes
+      Radius: 0.10000000149011612
+      Reference Frame: <Fixed Frame>
       Value: true
   Enabled: true
   Global Options:
@@ -131,27 +121,45 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz_default_plugins/Orbit
-      Distance: 16.612457275390625
+      Class: rviz_default_plugins/FrameAligned
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
-      Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
+      Lock Camera: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.785398006439209
-      Target Frame: <Fixed Frame>
-      Value: Orbit (rviz)
-      Yaw: 0.785398006439209
-    Saved: ~
+      Pitch: 1.4097964763641357
+      Point towards: -z axis
+      Position:
+        X: -2.6901330947875977
+        Y: 0.1883687973022461
+        Z: 20.182727813720703
+      Target Frame: Ego_frame
+      Value: FrameAligned (rviz_default_plugins)
+      Yaw: 6.213183879852295
+    Saved:
+      - Class: rviz_default_plugins/FrameAligned
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: false
+        Invert Z Axis: false
+        Lock Camera: false
+        Name: FrameAligned
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.3703988194465637
+        Point towards: -z axis
+        Position:
+          X: -1.0463066101074219
+          Y: -12.065470695495605
+          Z: 3.339367151260376
+        Target Frame: Ego_frame
+        Value: FrameAligned (rviz_default_plugins)
+        Yaw: 1.5369926691055298
 Window Geometry:
   Displays:
     collapsed: false
@@ -168,5 +176,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 495
-  Y: 57
+  X: 431
+  Y: -7

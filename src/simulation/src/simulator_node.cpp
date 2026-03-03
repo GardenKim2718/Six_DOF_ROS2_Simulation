@@ -28,7 +28,8 @@ StateDerivative Simulator::ComputeStateDerivative(
                        state.pose.orientation.y, state.pose.orientation.z);
   q.normalize();
 
-  const Eigen::Matrix3d D_IB = q.toRotationMatrix();
+  const Eigen::Matrix3d D_I2B = q.toRotationMatrix();
+  const Eigen::Matrix3d D_B2I = D_I2B.transpose();
 
   // check for force/torque limits
   Eigen::Vector3d force_cmd(cmd.force.x, cmd.force.y, cmd.force.z);
@@ -43,7 +44,7 @@ StateDerivative Simulator::ComputeStateDerivative(
 
   // compute force in inertial frame
   const Eigen::Vector3d F_B(force_cmd.x(), force_cmd.y(), force_cmd.z());
-  const Eigen::Vector3d F_I = D_IB * F_B;
+  const Eigen::Vector3d F_I = D_B2I * F_B;
 
   const Eigen::Vector3d a_I = F_I / mass_;
   derivative.dvx = a_I.x();
@@ -53,7 +54,7 @@ StateDerivative Simulator::ComputeStateDerivative(
   const Eigen::Vector3d w_B(state.vel.angular.x, state.vel.angular.y, state.vel.angular.z);
   const Eigen::Quaterniond omega_b(0.0, w_B.x(), w_B.y(), w_B.z());
 
-  const Eigen::Quaterniond qdot = q * omega_b;
+  const Eigen::Quaterniond qdot = omega_b * q;
 
   derivative.dqx = 0.5 * qdot.x();
   derivative.dqy = 0.5 * qdot.y();
