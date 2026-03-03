@@ -119,6 +119,8 @@ private:
     double loop_rate_hz_{100.0};
 
     // declare the additional variables for yourself
+    std::string frame_id_ = "world";
+
     double mass_{1.0};
     Eigen::Matrix3d inertia_;
     Eigen::Matrix3d inertia_inv_;

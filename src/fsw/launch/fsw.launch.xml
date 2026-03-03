@@ -39,6 +39,10 @@
     <param name="max_force" value="1.0"/>
     <param name="max_torque" value="1.0"/>
 
+    <!-- Guidance Gains -->
+    <param name="angular_kp" value="0.8"/>
+    <param name="angular_kd" value="0.16"/>
+
   </node>
 
   <!-- Control Node -->

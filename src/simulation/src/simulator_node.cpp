@@ -171,6 +171,7 @@ Simulator::Simulator()
   this->declare_parameter<double>("initial_time", 0.0);
   this->declare_parameter<double>("loop_rate_hz", 100.0);
   this->declare_parameter<std::string>("id", "ego");
+  this->declare_parameter<std::string>("frame_id", "world");
 
   this->declare_parameter<double>("initial_x", 0.0);
   this->declare_parameter<double>("initial_y", 0.0);
@@ -201,8 +202,8 @@ Simulator::Simulator()
   GetParameters();
 
   RCLCPP_INFO(this->get_logger(),
-    "Simulator Parameters: initial_time=%.3f, loop_rate_hz=%.3f, id=%s",
-    initial_time_, loop_rate_hz_, o_initial_state_.id.c_str());
+    "Simulator Parameters: initial_time=%.3f, loop_rate_hz=%.3f, id=%s, frame_id=%s",
+    initial_time_, loop_rate_hz_, o_initial_state_.id.c_str(), frame_id_.c_str());
 
   RCLCPP_INFO(this->get_logger(),
     "Initial Linear State: x=%.3f, y=%.3f, z=%.3f, vx=%.3f, vy=%.3f, vz=%.3f",
@@ -252,6 +253,7 @@ Simulator::Simulator()
       [this]() { this->Run(); }); 
 
   // Simulator Initialization
+  o_initial_state_.header.frame_id = frame_id_;
   o_state_ = o_initial_state_;
   sim_time_prev_ = rclcpp::Time(initial_time_);
   real_time_prev_ = current_time;
@@ -268,6 +270,7 @@ void Simulator::GetParameters()
   this->get_parameter("initial_time", initial_time_);
   this->get_parameter("loop_rate_hz", loop_rate_hz_);
   this->get_parameter("id", o_initial_state_.id);
+  this->get_parameter("frame_id", frame_id_);
 
   this->get_parameter("initial_x", o_initial_state_.pose.position.x);
   this->get_parameter("initial_y", o_initial_state_.pose.position.y);

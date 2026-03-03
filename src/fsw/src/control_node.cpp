@@ -7,6 +7,7 @@
  *
  * @date      2026-02-09 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-02-13 expanded by Chungwon Kim for 6-DOF control
+ *            2026-03-03 edited by Chungwon Kim for Guidance-Command interface update
  */
 
 #include "fsw/control_node.hpp"
@@ -63,6 +64,10 @@ Control::Control()
     sub_guidance_ = this->create_subscription<interfaces::msg::Guidance>(
         "guidance", qos_profile,
         std::bind(&Control::CallbackGuidance, this, std::placeholders::_1));
+
+    sub_target_ = this->create_subscription<interfaces::msg::Target>(
+        "target", qos_profile,
+        std::bind(&Control::CallbackTarget, this, std::placeholders::_1));
 
     // Publishers Initialization
     pub_command_ = this->create_publisher<interfaces::msg::Command>(
@@ -137,7 +142,7 @@ void Control::Init(const interfaces::msg::State& initial_state)
 void Control::Run()
 {
     // handle initialization
-    if (!b_simulator_initialized_ || !b_guidance_initialized_) {
+    if (!b_simulator_initialized_ || !b_guidance_initialized_ || !b_target_initialized_) {
         RCLCPP_WARN(this->get_logger(),
             "Waiting for simulator and guidance initialization...");
         return;
@@ -159,15 +164,26 @@ void Control::Run()
     // get subscribed guidance
     interfaces::msg::Guidance current_guidance;
     {
-        std::lock_guard<std::mutex> lock(mutex_state_);
+        std::lock_guard<std::mutex> lock(mutex_guidance_);
         current_guidance = last_guidance_;
+    }
+
+    // get subscribed target
+    interfaces::msg::Target current_target;
+    {
+        std::lock_guard<std::mutex> lock(mutex_target_);
+        current_target = last_target_;
     }
 
     // compute time step
     time_dt_ = (sim_time_curr_ - sim_time_prev_).seconds();
     sim_time_prev_ = sim_time_curr_;
 
-    // attitude control
+    // check for guidance mode
+    b_linear_guidance_active_ = current_guidance.linear_guidance_active;
+    b_angular_guidance_active_ = current_guidance.angular_guidance_active;
+
+    //----------------------Attitude Control--------------------------//
     Eigen::Quaterniond q_current(
         current_state.pose.orientation.w,
         current_state.pose.orientation.x,
@@ -180,37 +196,54 @@ void Control::Run()
         current_state.vel.angular.y,
         current_state.vel.angular.z);
 
-    Eigen::Quaterniond q_desired(
-        current_guidance.pose.orientation.w,
-        current_guidance.pose.orientation.x,
-        current_guidance.pose.orientation.y,
-        current_guidance.pose.orientation.z);
-    q_desired.normalize();
-
-    Eigen::Vector3d w_desired(
-        current_guidance.vel.angular.x,
-        current_guidance.vel.angular.y,
-        current_guidance.vel.angular.z);
-
-    err_quat_ = QuaternionSignCorrection(q_desired * QuaternionConjugate(q_current));
-    Eigen::Vector3d err_quat_vec(
-        err_quat_.x(), err_quat_.y(), err_quat_.z());
-    
-    err_ang_vel_ = w_desired - w_current;
-    integral_err_quat_ += Eigen::Vector3d(
-        err_quat_.x(), err_quat_.y(), err_quat_.z()) * time_dt_;
-    
     Eigen::Vector3d torque_command;
-    torque_command = angular_kp_ * err_quat_vec
-                     + angular_kd_ * err_ang_vel_
-                     + angular_ki_ * integral_err_quat_
-                     - w_current.cross(inertia_ * w_current);
+
+    if (b_angular_guidance_active_)
+    {
+        Eigen::Vector3d angular_acc_command = Eigen::Vector3d(
+            current_guidance.accel.angular.x,
+            current_guidance.accel.angular.y,
+            current_guidance.accel.angular.z);
+        
+        // convert angular acceleration command to torque command
+        torque_command = inertia_ * angular_acc_command +
+                         w_current.cross(inertia_ * w_current);
+    } else 
+    {
+        // Use PID control for attitude control near target (APDG inactive)
+        Eigen::Quaterniond q_desired(
+            current_target.pose.orientation.w,
+            current_target.pose.orientation.x,
+            current_target.pose.orientation.y,
+            current_target.pose.orientation.z);
+        q_desired.normalize();
+
+        Eigen::Vector3d w_desired(
+            current_target.vel.angular.x,
+            current_target.vel.angular.y,
+            current_target.vel.angular.z);
+
+        err_quat_ = QuaternionSignCorrection(q_desired * QuaternionConjugate(q_current));
+        Eigen::Vector3d err_quat_vec(
+            err_quat_.x(), err_quat_.y(), err_quat_.z());
+        
+        err_ang_vel_ = w_desired - w_current;
+        integral_err_quat_ += Eigen::Vector3d(
+            err_quat_.x(), err_quat_.y(), err_quat_.z()) * time_dt_;
+        
+        torque_command = angular_kp_ * err_quat_vec
+                        + angular_kd_ * err_ang_vel_
+                        + angular_ki_ * integral_err_quat_
+                        - w_current.cross(inertia_ * w_current);
+    }
 
     if (torque_command.norm() > max_torque_) {
         torque_command = (torque_command.normalized()) * max_torque_;
     }
 
-    // linear control
+    //----------------------End of Attitude Control-------------------//
+
+    //---------------------- Linear Control--------------------------//
     Eigen::Vector3d pos_current(
         current_state.pose.position.x,
         current_state.pose.position.y,
@@ -221,33 +254,48 @@ void Control::Run()
         current_state.vel.linear.y,
         current_state.vel.linear.z);
     
-    Eigen::Vector3d pos_desired(
-        current_guidance.pose.position.x,
-        current_guidance.pose.position.y,
-        current_guidance.pose.position.z);
-    
-    Eigen::Vector3d speed_desired(
-        current_guidance.vel.linear.x,
-        current_guidance.vel.linear.y,
-        current_guidance.vel.linear.z);
-
-    err_pos_ = pos_desired - pos_current;
-    err_vel_ = speed_desired - speed_current;
-    integral_err_pos_ += err_pos_ * time_dt_;
-
     Eigen::Vector3d acc_command_inertial;
-    acc_command_inertial = linear_kp_ * err_pos_
-                          + linear_kd_ * err_vel_
-                          + linear_ki_ * integral_err_pos_;
-    
     Eigen::Vector3d acc_command_body;
+
     Eigen::Matrix3d D_I2B = q_current.toRotationMatrix();
-    acc_command_body = D_I2B * acc_command_inertial;
+
+    if (b_linear_guidance_active_)
+    {
+        acc_command_inertial = Eigen::Vector3d(
+            current_guidance.accel.linear.x,
+            current_guidance.accel.linear.y,
+            current_guidance.accel.linear.z);
+        acc_command_body = D_I2B * acc_command_inertial;
+    } else
+    {
+        Eigen::Vector3d pos_desired(
+            current_target.pose.position.x,
+            current_target.pose.position.y,
+            current_target.pose.position.z);
+        
+        Eigen::Vector3d speed_desired(
+            current_target.vel.linear.x,
+            current_target.vel.linear.y,
+            current_target.vel.linear.z);
+
+        err_pos_ = pos_desired - pos_current;
+        err_vel_ = speed_desired - speed_current;
+        integral_err_pos_ += err_pos_ * time_dt_;
+
+        acc_command_inertial = linear_kp_ * err_pos_
+                            + linear_kd_ * err_vel_
+                            + linear_ki_ * integral_err_pos_;
+        
+        acc_command_body = D_I2B * acc_command_inertial;
+    }
+
     Eigen::Vector3d force_command_body = mass_ * acc_command_body;
 
     if (force_command_body.norm() > max_force_) {
         force_command_body = (force_command_body.normalized()) * max_force_;
     }
+
+    //----------------------End of Linear Control-------------------//
 
     // publish command
     o_command_.id = current_state.id;

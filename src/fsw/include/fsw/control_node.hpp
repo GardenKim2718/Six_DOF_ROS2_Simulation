@@ -7,7 +7,9 @@
  *
  * @date      2026-02-09 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-02-13 expanded by Chungwon Kim for 6-DOF control
+ *            2026-03-03 edited by Chungwon Kim for Guidance-Command interface update
  */
+
 #ifndef __control_node_hpp__
 #define __control_node_hpp__
 
@@ -22,6 +24,7 @@
 #include "interfaces/msg/state.hpp"
 #include "interfaces/msg/command.hpp"
 #include "interfaces/msg/guidance.hpp"
+#include "interfaces/msg/target.hpp"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -49,24 +52,32 @@ public:
         b_simulator_initialized_ = true;
     }
 
+    inline void CallbackTarget(
+        const interfaces::msg::Target::SharedPtr msg)
+    {
+        std::lock_guard<std::mutex> lock(mutex_target_);
+        last_target_ = *msg;
+        b_target_initialized_ = true;
+    }
+
     inline void CallbackGuidance(
         const interfaces::msg::Guidance::SharedPtr msg)
     {
-        std::lock_guard<std::mutex> lock(mutex_state_);
+        std::lock_guard<std::mutex> lock(mutex_guidance_);
         last_guidance_ = *msg;
         b_guidance_initialized_ = true;
     }
 
     // Custom Functions
     inline Eigen::Quaterniond QuaternionConjugate(
-        const Eigen::Quaterniond& q)
+        const Eigen::Quaterniond &q)
     {
         // return conjugate of quaternion
         return Eigen::Quaterniond(q.w(), -q.x(), -q.y(), -q.z());
     }
 
     inline Eigen::Quaterniond QuaternionSignCorrection(
-        const Eigen::Quaterniond& q)
+        const Eigen::Quaterniond &q)
     {
         // Ensure that the quaternion scalar part is non-negative
         if (q.w() < 0.0)
@@ -81,9 +92,12 @@ public:
     rclcpp::Publisher<interfaces::msg::Command>::SharedPtr pub_command_;
     rclcpp::Subscription<interfaces::msg::State>::SharedPtr sub_state_;  
     rclcpp::Subscription<interfaces::msg::Guidance>::SharedPtr sub_guidance_;
+    rclcpp::Subscription<interfaces::msg::Target>::SharedPtr sub_target_;
 
     // mutex
     std::mutex mutex_state_;
+    std::mutex mutex_guidance_;
+    std::mutex mutex_target_;
 
     // Steady clock
     rclcpp::Clock steady_clock{RCL_STEADY_TIME};
@@ -94,6 +108,7 @@ public:
     // input
     interfaces::msg::State last_state_;
     interfaces::msg::Guidance last_guidance_;
+    interfaces::msg::Target last_target_;
 
     // output
     interfaces::msg::Command o_command_;
@@ -122,8 +137,12 @@ public:
     double max_torque_ = 10.0;   // maximum torque [N*m]
 
     // declare the additional variables for yourself
+    bool b_linear_guidance_active_ = false;
+    bool b_angular_guidance_active_ = false;
+
     bool b_simulator_initialized_ = false;
     bool b_guidance_initialized_ = false;
+    bool b_target_initialized_ = false;
     bool b_control_initialized_ = false;
 
     rclcpp::Time sim_time_prev_;

@@ -6,6 +6,8 @@
  * @brief     6-DOF guidance node header file
  *
  * @date      2026-02-26 created by Chungwon Kim (gardenkim@kaist.ac.kr)
+ *            2026-03-01 edited by Chungwon Kim (added linear guidance logic based on Apollo Powered Descent Guidance)
+ *            2026-03-03 edited by Chungwon Kim (added rotational guidance logic based on Apollo Powered Descent Guidance application on attitude guidance)
  */
 
 #ifndef __guidance_node_hpp__
@@ -21,6 +23,7 @@
 
 #include "interfaces/msg/state.hpp"
 #include "interfaces/msg/guidance.hpp"
+#include "interfaces/msg/target.hpp"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -68,8 +71,27 @@ public:
         }    
     }
 
+    void LinearGuidance(
+        const interfaces::msg::State &current_state,
+        const interfaces::msg::Target &target_state,
+        double &T_go_linear_, const double acc_limit_,
+        Eigen::Vector3d& accel_cmd_,
+        bool &b_linear_guidance_active_);
+
+    bool ApolloPoweredDescentGuidanceValidate(
+        const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
+        const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
+        const double T_go, const double acc_limit_);
+
+    void AngularGuidance(
+        const interfaces::msg::State &current_state,
+        const interfaces::msg::Target &target_state,
+        double &T_go_angular_, const double ang_acc_limit_,
+        Eigen::Vector3d &ang_accel_cmd_,
+        bool &b_angular_guidance_active_);
+    
     // topics
-    rclcpp::Publisher<interfaces::msg::Command>::SharedPtr pub_guidance_;
+    rclcpp::Publisher<interfaces::msg::Guidance>::SharedPtr pub_guidance_;
     rclcpp::Publisher<interfaces::msg::Target>::SharedPtr pub_target_;
     rclcpp::Subscription<interfaces::msg::State>::SharedPtr sub_state_;  
 
@@ -86,7 +108,7 @@ public:
     interfaces::msg::State last_state_;
 
     // output
-    interfaces::msg::Command o_guidance_;
+    interfaces::msg::Guidance o_guidance_;
     interfaces::msg::Target o_target_;
 
     // time
@@ -123,11 +145,13 @@ public:
     double max_torque_ = 10.0;   // maximum torque [N*m]
 
     // guidance parameters
-    double T_go_linear_ = 5.0;   // time-to-go for linear guidance [s]
-    double linear_KR_ = 6.0;   // linear guidance gain
-    double linear_KV_ = 4.0;   // linear guidance gain
-    
-    double T_go_rotational_ = 5.0;   // time-to-go for rotational guidance [s]
+    double T_go_linear_ = 10.0;   // time-to-go for linear guidance [s]
+    double T_go_linear_min_ = 1.0;    // minimum time-to-go for linear guidance [s]
+    double T_go_angular_ = 5.0;   // time-to-go for rotational guidance [s]
+    double T_go_angular_min_ = 1.0;   // minimum time-to-go for rotational guidance [s]
+
+    double angular_kp_ = 1.0;   // proportional gain for angular guidance
+    double angular_kd_ = 1.0;   // derivative gain for angular guidance
 
     // declare additional variables for yourself
     bool b_simulator_initialized_ = false;
@@ -148,9 +172,6 @@ public:
     Eigen::Quaterniond curr_quat_ = Eigen::Quaterniond::Identity();
     Eigen::Vector3d curr_ang_speed_ = Eigen::Vector3d::Zero();
 
-    Eigen::Vector3d err_pos_ = Eigen::Vector3d::Zero();
-    Eigen::Vector3d err_vel_ = Eigen::Vector3d::Zero();
-
     Eigen::Quaterniond quat_curr_ = Eigen::Quaterniond::Identity();
     Eigen::Quaterniond quat_des_ = Eigen::Quaterniond::Identity();
     Eigen::Quaterniond err_quat_ = Eigen::Quaterniond::Identity();
@@ -159,6 +180,12 @@ public:
     Eigen::Vector3d eigen_vec_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d ang_vel_curr_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d ang_vel_des_ = Eigen::Vector3d::Zero();
+
+    Eigen::Vector3d accel_cmd_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d ang_accel_cmd_ = Eigen::Vector3d::Zero();
+
+    bool b_linear_guidance_active_ = true;
+    bool b_angular_guidance_active_ = true;
 };
 
 #endif  // __guidance_node_hpp__

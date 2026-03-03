@@ -6,8 +6,8 @@
  * @brief     6-DOF guidance node source file
  *
  * @date      2026-02-26 created by Chungwon Kim (gardenkim@kaist.ac.kr)
- *            2026-03-01 expanded by Chungwon Kim for 6-DOF guidance
- *                       (applied augmented Apollo powered descent guidance)
+ *            2026-03-01 edited by Chungwon Kim (added linear guidance logic based on Apollo Powered Descent Guidance)
+ *            2026-03-03 edited by Chungwon Kim (added rotational guidance logic based on Apollo Powered Descent Guidance application on attitude guidance)
  */
 
 #include "fsw/guidance_node.hpp"
@@ -46,17 +46,21 @@ Guidance::Guidance()
     this->declare_parameter("max_force", max_force_);
     this->declare_parameter("max_torque", max_torque_);
 
+    this->declare_parameter("angular_kp", angular_kp_);
+    this->declare_parameter("angular_kd", angular_kd_);
+
     // Get parameters
     GetParameters();
 
     RCLCPP_INFO(this->get_logger(),
         "Control Node Parameters: loop_rate_hz=%.3f", loop_rate_hz_);
     
-    RCLCPP_INFO(this->get_logger(),
-        "Target State: position=(%.3f, %.3f, %.3f),
-        linear speed=(%.3f, %.3f, %.3f),
-        orientation(quaternion)=(%.3f, %.3f, %.3f, %.3f),
-        angular speed=(%.3f, %.3f, %.3f)",
+    RCLCPP_INFO(
+        this->get_logger(),
+        "Target State: position=(%.3f, %.3f, %.3f), "
+        "linear speed=(%.3f, %.3f, %.3f), "
+        "orientation(quaternion)=(%.3f, %.3f, %.3f, %.3f), "
+        "angular speed=(%.3f, %.3f, %.3f)",
         target_x_, target_y_, target_z_,
         target_vx_, target_vy_, target_vz_,
         target_qx_, target_qy_, target_qz_, target_qw_,
@@ -68,8 +72,8 @@ Guidance::Guidance()
         std::bind(&Guidance::CallbackState, this, std::placeholders::_1));
 
     // Publishers Initialization
-    pub_guidance_ = this->create_publisher<interfaces::msg::Command>(
-        "command", qos_profile);
+    pub_guidance_ = this->create_publisher<interfaces::msg::Guidance>(
+        "guidance", qos_profile);
     
     pub_target_ = this->create_publisher<interfaces::msg::Target>(
         "target", qos_profile);
@@ -121,6 +125,9 @@ void Guidance::GetParameters()
     this->get_parameter("max_force", max_force_);
     this->get_parameter("max_torque", max_torque_);
 
+    this->get_parameter("angular_kp", angular_kp_);
+    this->get_parameter("angular_kd", angular_kd_);
+
     // target state
     target_pos_ = Eigen::Vector3d(target_x_, target_y_, target_z_);
     target_speed_ = Eigen::Vector3d(target_vx_, target_vy_, target_vz_);
@@ -152,6 +159,7 @@ void Guidance::Init(const interfaces::msg::State& initial_state)
     // Initialize target message
     o_target_.id = initial_state.id;
     o_target_.header.stamp = initial_state.header.stamp;
+    o_target_.header.frame_id = initial_state.header.frame_id;
     o_target_.pose.position.x = target_x_;
     o_target_.pose.position.y = target_y_;
     o_target_.pose.position.z = target_z_;
@@ -193,15 +201,17 @@ void Guidance::Run()
     time_dt_ = (sim_time_curr_ - sim_time_prev_).seconds();
     sim_time_prev_ = sim_time_curr_;
 
-
     //----------------------Linear Guidance Logic ---------------------------//
     // Based on Apollo Powered Descent Guidance
     // modified for zero-G environment
 
-    // linear acceleration limit (approximate)
-    double acc_limit = 0.85 * max_force_ / mass_;
+    // linear acceleration limit (approximate, with 15% margin)
+    double acc_limit_ = 0.85 * max_force_ / mass_;
 
-    
+    T_go_linear_ = T_go_linear_ - time_dt_;   // decrement time-to-go guess by time step
+
+    LinearGuidance(current_state, o_target_, T_go_linear_, acc_limit_,
+        accel_cmd_, b_linear_guidance_active_);
     //-------------------end of linear guidance logic------------------------//
 
 
@@ -225,15 +235,27 @@ void Guidance::Run()
     eigen_vec_ = Eigen::Vector3d(err_quat_.x(), err_quat_.y(), err_quat_.z());
     eigen_vec_.normalize();
 
-    maneuver_angle_ = 2.0 * std::acos(std::abs(err_quat_.w()));
+    double maneuver_angle_ = 2.0 * std::acos(std::abs(err_quat_.w()));
 
-    // compute angular acceleration limit (approximate)
-    I_e_ = inertia_ * eigen_vec_;
-    double ang_acc_limit = 0.85 * max_torque_ / I_e_.norm();
+    // compute angular acceleration limit (approximate, 40% margin)
+    Eigen::Vector3d I_e_ = inertia_ * eigen_vec_;
+    double ang_acc_limit = 0.6 * max_torque_ / I_e_.norm();
 
+    AngularGuidance(current_state, o_target_, T_go_angular_, ang_acc_limit,
+        ang_accel_cmd_, b_angular_guidance_active_);
     //--------------end of rotational guidance logic------------------------//
 
     // publish guidance command
+    o_guidance_.header.stamp = current_state.header.stamp;
+    o_guidance_.linear_guidance_active = b_linear_guidance_active_;
+    o_guidance_.angular_guidance_active = b_angular_guidance_active_;
+    o_guidance_.accel.linear.x = accel_cmd_.x();
+    o_guidance_.accel.linear.y = accel_cmd_.y();
+    o_guidance_.accel.linear.z = accel_cmd_.z();
+    o_guidance_.accel.angular.x = ang_accel_cmd_.x();
+    o_guidance_.accel.angular.y = ang_accel_cmd_.y();
+    o_guidance_.accel.angular.z = ang_accel_cmd_.z();
+    
     pub_guidance_->publish(o_guidance_);
 
     // publish target state
@@ -242,119 +264,138 @@ void Guidance::Run()
 
 void Guidance::LinearGuidance(
     const interfaces::msg::State& current_state,
-    const interfaces::msg::Target& target_state)
-{
+    const interfaces::msg::Target& target_state,
+    double& T_go_linear_, const double acc_limit_,
+    Eigen::Vector3d& accel_cmd_,
+    bool &b_linear_guidance_active_)
+{   
     // based the Apollo Powered Descent Guidance (APDG)
     // iterate until the trajectory does not exceed the acceleration limit
 
-    // 1) Extract current state (position & velocity)
-    Eigen::Vector3d r(
+    Eigen::Vector3d x0 = Eigen::Vector3d(
         current_state.pose.position.x,
         current_state.pose.position.y,
         current_state.pose.position.z);
-
-    Eigen::Vector3d v(
+    Eigen::Vector3d v0 = Eigen::Vector3d(
         current_state.vel.linear.x,
         current_state.vel.linear.y,
         current_state.vel.linear.z);
-
-    // 2) Extract target state (position & velocity)
-    Eigen::Vector3d r_f(
+    Eigen::Vector3d xf = Eigen::Vector3d(
         target_state.pose.position.x,
         target_state.pose.position.y,
         target_state.pose.position.z);
-
-    Eigen::Vector3d v_f(
+    Eigen::Vector3d vf = Eigen::Vector3d(
         target_state.vel.linear.x,
         target_state.vel.linear.y,
         target_state.vel.linear.z);
+    Eigen::Vector3d err_vel = Eigen::Vector3d(
+        target_state.vel.linear.x - current_state.vel.linear.x,
+        target_state.vel.linear.y - current_state.vel.linear.y,
+        target_state.vel.linear.z - current_state.vel.linear.z);
 
-    // 3) Acceleration limit (already defined logic)
-    const double acc_limit = 0.85 * max_force_ / mass_;
-    if (acc_limit <= 1e-9) {
-        RCLCPP_WARN(this->get_logger(),
-            "Acceleration limit is near zero (mass=%.3f, max_force=%.3f).",
-            mass_, max_force_);
-        // Just zero command if config is degenerate
-        // TODO: set command to zero in o_guidance_
-        return;
+    // running bisection method to find the time-to-go that satisfies the acceleration limit
+    double Tgo_guess_ = T_go_linear_;
+    double Tgo_guess2_ = T_go_linear_;
+    
+    const double Tgo_delta_ = 2.0;   // time-to-go adjustment step [s]
+    const double Tgo_tol = 0.1;       // time-to-go convergence tolerance [s]
+
+    bool Tgo_converged = false;
+    bool Guess1_ = false;
+    bool Guess2_ = false;
+    
+    Guess1_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess_, acc_limit_);
+    Guess2_ = Guess1_;
+
+    while (Guess2_ == Guess1_)
+    {
+        if (Guess1_)
+        {
+            Tgo_guess2_ = Tgo_guess2_ - Tgo_delta_;
+
+            if (Tgo_guess2_ < T_go_linear_min_){
+                Tgo_converged = true;
+                b_linear_guidance_active_ = false;
+
+                T_go_linear_ = T_go_linear_min_;
+                break;
+            }
+        } else
+        {
+            Tgo_guess2_ = Tgo_guess2_ + Tgo_delta_;
+        }
+        Guess2_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess2_, acc_limit_);
     }
 
-    // 4) Initial guess for T_go
-    Eigen::Vector3d dr = r_f - r;
-    Eigen::Vector3d dv = v_f - v;
-    const double dr_norm = dr.norm();
-    const double dv_norm = dv.norm();
+    while (!Tgo_converged)
+    {
+        double Tgo_guess_mid_ = 0.5 * (Tgo_guess_ + Tgo_guess2_);
+        Guess1_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess_mid_, acc_limit_);
 
-    double T_go = tgo_last_;  // start from last used value
-
-    // A heuristic update from errors + limits for robustness
-    if (acc_limit > 1e-9) {
-        double T_pos = (dr_norm > 1e-6)
-            ? std::sqrt(4.0 * dr_norm / acc_limit)
-            : tgo_min_;
-        double T_vel = (dv_norm > 1e-6)
-            ? 2.0 * dv_norm / acc_limit
-            : tgo_min_;
-
-        double T_guess = std::max(T_pos, T_vel);
-        T_go = std::max(tgo_min_, std::min(T_guess, tgo_max_));
-    }
-
-    // 5) Iterate T_go until acceleration satisfies limit
-    Eigen::Vector3d a_cmd = Eigen::Vector3d::Zero();
-    for (int k = 0; k < tgo_max_iter_; ++k) {
-        a_cmd = ApolloPoweredDescentGuidanceAccel(r, v, r_f, v_f, T_go);
-        double a_norm = a_cmd.norm();
-
-        if (a_norm <= acc_limit || T_go >= tgo_max_) {
-            break;
+        if (abs(Tgo_guess_ - Tgo_guess2_) < Tgo_tol){
+            Tgo_converged = true;
+            T_go_linear_ = Tgo_guess_mid_;
         }
 
-        // Increase T_go to reduce required acceleration
-        // (multiplicative factor is simple & robust)
-        T_go *= 1.2;
-        if (T_go > tgo_max_) {
-            T_go = tgo_max_;
+        if (Guess1_){
+            Tgo_guess2_ = Tgo_guess_mid_;
+        } else {
+            Tgo_guess_ = Tgo_guess_mid_;
         }
     }
 
-    // Store T_go for next cycle continuity
-    tgo_last_ = T_go;
-
-    // 6) Final safety saturation if necessary
-    double a_norm = a_cmd.norm();
-    if (a_norm > acc_limit && a_norm > 1e-9) {
-        a_cmd *= (acc_limit / a_norm);
-    }
-
-    // 7) Convert acceleration to force (if Command is force-based)
-    Eigen::Vector3d f_cmd = mass_ * a_cmd;
-
+    // compute reference acceleration command with the converged time-to-go
+    // (inertial frame)
+    accel_cmd_ = 6.0 * (xf - x0 - v0 * T_go_linear_) / (T_go_linear_ * T_go_linear_) - 
+                 2.0 * (vf - v0) / T_go_linear_;
 }
 
-Eigen::Vector3d Guidance::ApolloPoweredDescentGuidanceAccel(
-    const Eigen::Vector3d& r,
-    const Eigen::Vector3d& v,
-    const Eigen::Vector3d& r_f,
-    const Eigen::Vector3d& v_f,
-    double T_go) const
+bool Guidance::ApolloPoweredDescentGuidanceValidate(
+        const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
+        const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
+        const double T_go_, const double acc_limit_)
 {
-    // Protect against degenerate T_go
-    if (T_go < 1e-6) {
-        return Eigen::Vector3d::Zero();
+    // checking whether the given Tgo satisfies the acceleration limit for the given state error
+    Eigen::Vector3d c0 = 6.0 * (xf - x0 - v0 * T_go_) / (T_go_ * T_go_) - 
+                        2.0 * (vf - v0) / T_go_;
+    Eigen::Vector3d c1 = 6.0 * (vf - v0) / (T_go_ * T_go_) - 12.0 * (xf - x0 - v0 * T_go_) / (T_go_ * T_go_ * T_go_);
+
+    // check for maximum acceleration magnitude
+    double max_acc_cand1 = c0.norm();
+    double max_acc_cand2 = (c0 + c1 * T_go_).norm();
+    double max_acc = std::max(max_acc_cand1, max_acc_cand2);
+
+    return max_acc < acc_limit_;
+}
+
+void Guidance::AngularGuidance(
+    const interfaces::msg::State &current_state,
+    const interfaces::msg::Target &target_state,
+    double &T_go_angular_, const double ang_acc_limit_,
+    Eigen::Vector3d &ang_accel_cmd_,
+    bool &b_angular_guidance_active_)
+{
+    // based on Apollo Powered Descent Guidance application on attitude guidance
+    // see for below paper for details:
+    // "GUIDANCE, NAVIGATION, AND CONTROL OF SMALL SATELLITE ATTITUDE USING MICRO-THRUSTERS"
+    // modified for Quaternion attitude representation by Chungwon Kim
+
+    // create target angular acceleration with PD control
+    Eigen::Vector3d err_quat_vec_ = Eigen::Vector3d(err_quat_.x(), err_quat_.y(), err_quat_.z());
+    Eigen::Vector3d ang_accel_tgt_ = angular_kp_ * err_quat_vec_ + angular_kd_ * err_ang_vel_;
+
+    // set T_go for angular guidance with T_go from linear guidance (temporary)
+    T_go_angular_ = T_go_linear_ * 0.8;
+    
+    if (T_go_angular_ < T_go_angular_min_){
+        T_go_angular_ = T_go_angular_min_;
+        b_angular_guidance_active_ = false;
     }
 
-    // Zero-g ZEM / ZEV
-    Eigen::Vector3d ZEM = r_f - (r + v * T_go);
-    Eigen::Vector3d ZEV = v_f - v;
-
-    // APDG-style acceleration (no gravity term)
-    Eigen::Vector3d a_cmd =
-        - apdg_kR_ * (ZEM / (T_go * T_go))
-        - apdg_kV_ * (ZEV / T_go);
-
-    return a_cmd;
+    // compute angular acceleration command (body frame)
+    ang_accel_cmd_ = 12.0 * err_quat_vec_ / (T_go_angular_ * T_go_angular_) + 
+                     6.0 * (curr_ang_speed_ + target_ang_vel_) / T_go_angular_ + 
+                     ang_accel_tgt_;
 }
 
 int main(int argc, char ** argv)

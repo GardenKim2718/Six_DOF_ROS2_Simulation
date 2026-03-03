@@ -29,11 +29,11 @@ Display::Display(double &loop_rate_hz_)
 
     // Create Subscribers
     sub_target_ = this->create_subscription<interfaces::msg::Target>(
-        "target2d", qos_profile,
+        "target", qos_profile,
         std::bind(&Display::CallbackTarget, this, std::placeholders::_1));
     
     sub_state_ = this->create_subscription<interfaces::msg::State>(
-        "state2d", qos_profile,
+        "state", qos_profile,
         std::bind(&Display::CallbackState, this, std::placeholders::_1));
 
     // Create Publishers
@@ -105,7 +105,7 @@ void Display::DisplayState(const rclcpp::Time& time,
 
     ego_marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
     std::string dir(getenv("PWD"));
-    std::string mesh_path("/src/simple_simulation_rviz/resources");
+    std::string mesh_path("/src/simulation/resources");
     ego_marker.mesh_resource = "file://" + dir + mesh_path + "/Space_core.stl";
     ego_marker.mesh_use_embedded_materials = true;
 
@@ -239,7 +239,7 @@ void Display::DisplayTarget(const rclcpp::Time& time,
 
     // Build mesh path (same logic as your ego marker)
     std::string dir(getenv("PWD"));
-    std::string mesh_path("/src/simple_simulation_rviz/resources");
+    std::string mesh_path("/src/simulation/resources");
     target_marker.mesh_resource = "file://" + dir + mesh_path + "/Space_core.stl";
 
     // If you want to control color/alpha from the marker, disable embedded materials

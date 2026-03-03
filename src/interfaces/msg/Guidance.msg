@@ -11,14 +11,14 @@
 # Optional identifier for multi-agent systems
 string id    # robot/agent name (e.g., "robot1")
 
-# 3D pose = position (m) + orientation quaternion (unit quaternion)
-geometry_msgs/Pose pose  # pose.position.x/y/z  [m]
-                         # pose.orientation.x/y/z/w  (unit quaternion)
+# Timestamp + coordinate frame of the pose
+std_msgs/Header header   # header.stamp : simulation time
+                         # header.frame_id : world frame for pose
 
-# 3D velocity = linear (m/s) + angular (rad/s)
-geometry_msgs/Twist vel  # vel.linear.x/y/z   [m/s]
-                         # vel.angular.x/y/z  [rad/s]
+# APDG Guidance Flag
+bool linear_guidance_active   # true if linear guidance is active
+bool angular_guidance_active  # true if angular guidance is active
 
 # 3D acceleration = linear (m/s^2) + angular (rad/s^2)
-geometry_msgs/Accel accel # accel.linear.x/y/z   [m/s^2]
-                          # accel.angular.x/y/z  [rad/s^2]
+geometry_msgs/Accel accel # accel.linear.x/y/z   [m/s^2] (Inertial frame)
+                          # accel.angular.x/y/z  [rad/s^2] (Body frame)
