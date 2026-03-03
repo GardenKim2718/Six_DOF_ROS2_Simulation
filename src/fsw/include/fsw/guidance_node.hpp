@@ -146,7 +146,7 @@ public:
 
     // guidance parameters
     double T_go_linear_ = 10.0;   // time-to-go for linear guidance [s]
-    double T_go_linear_min_ = 1.0;    // minimum time-to-go for linear guidance [s]
+    double T_go_linear_min_ = 0.5;    // minimum time-to-go for linear guidance [s]
     double T_go_angular_ = 5.0;   // time-to-go for rotational guidance [s]
     double T_go_angular_min_ = 1.0;   // minimum time-to-go for rotational guidance [s]
 
