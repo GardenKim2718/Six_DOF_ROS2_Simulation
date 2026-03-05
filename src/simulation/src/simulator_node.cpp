@@ -6,6 +6,7 @@
  * @brief     simulator node source file
  *
  * @date      2026-02-11 created by Chungwon Kim (gardenkim@kaist.ac.kr)
+ *            2026-03-05 updated to use steady clock instead of wall timer
  */
 
 #include "simulation/simulator_node.hpp"

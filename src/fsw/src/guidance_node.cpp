@@ -8,6 +8,7 @@
  * @date      2026-02-26 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-03-01 edited by Chungwon Kim (added linear guidance logic based on Apollo Powered Descent Guidance)
  *            2026-03-03 edited by Chungwon Kim (added rotational guidance logic based on Apollo Powered Descent Guidance application on attitude guidance)
+ *            2026-03-05 updated to use steady clock instead of wall timer
  */
 
 #include "fsw/guidance_node.hpp"
