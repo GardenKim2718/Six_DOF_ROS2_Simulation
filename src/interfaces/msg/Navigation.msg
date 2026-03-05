@@ -1,7 +1,7 @@
-# State.msg
+# Navigation.msg
 # ------------------------------------------------------------------
 # 3D full kinematic state for simulation and control.
-# True state vectors from the simulator node
+# Estimated state vectors from the navigation node
 #
 # Coordinate conventions (recommended):
 # - pose.position/orientation : world frame

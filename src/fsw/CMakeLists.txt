@@ -16,6 +16,22 @@ find_package(rclcpp REQUIRED)
 # include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+# navigation node
+add_executable(navigation_node src/navigation_node.cpp)
+ament_target_dependencies(
+   navigation_node
+   rclcpp
+   interfaces
+   std_msgs
+   geometry_msgs
+)
+target_link_libraries(navigation_node Eigen3::Eigen)
+
+target_include_directories(navigation_node PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
 # guidance node
 add_executable(guidance_node src/guidance_node.cpp)
 ament_target_dependencies(
@@ -48,10 +64,28 @@ target_include_directories(control_node PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
+# actuator node
+add_executable(actuator_node src/actuator_node.cpp)
+ament_target_dependencies(
+   actuator_node
+   rclcpp
+   interfaces
+   std_msgs
+   geometry_msgs
+)
+target_link_libraries(actuator_node Eigen3::Eigen)
+
+target_include_directories(actuator_node PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
 # install targets
 install(TARGETS
+  navigation_node
   guidance_node
   control_node
+  actuator_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

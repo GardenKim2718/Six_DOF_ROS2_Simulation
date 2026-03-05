@@ -22,7 +22,7 @@
 #include <mutex>
 #include <chrono>
 
-#include "interfaces/msg/state.hpp"
+#include "interfaces/msg/navigation.hpp"
 #include "interfaces/msg/command.hpp"
 #include "interfaces/msg/guidance.hpp"
 #include "interfaces/msg/target.hpp"
@@ -37,7 +37,7 @@ public:
   Control();
   ~Control();
 
-  void Init(const interfaces::msg::State& initial_state);
+  void Init(const interfaces::msg::Navigation& initial_state);
   void Run();
   void GetParameters();
 
@@ -46,7 +46,7 @@ public:
 
     // Callback function for command subscription
     inline void CallbackState(
-        const interfaces::msg::State::SharedPtr msg)
+        const interfaces::msg::Navigation::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_state_);
         last_state_ = *msg;
@@ -91,12 +91,12 @@ public:
 
     // topics
     rclcpp::Publisher<interfaces::msg::Command>::SharedPtr pub_command_;
-    rclcpp::Subscription<interfaces::msg::State>::SharedPtr sub_state_;  
+    rclcpp::Subscription<interfaces::msg::Navigation>::SharedPtr sub_navigation_;
     rclcpp::Subscription<interfaces::msg::Guidance>::SharedPtr sub_guidance_;
     rclcpp::Subscription<interfaces::msg::Target>::SharedPtr sub_target_;
 
     // mutex
-    std::mutex mutex_state_;
+    std::mutex mutex_navigation_;
     std::mutex mutex_guidance_;
     std::mutex mutex_target_;
 
@@ -107,7 +107,7 @@ public:
     rclcpp::TimerBase::SharedPtr t_run_node_;
 
     // input
-    interfaces::msg::State last_state_;
+    interfaces::msg::Navigation last_state_;
     interfaces::msg::Guidance last_guidance_;
     interfaces::msg::Target last_target_;
 

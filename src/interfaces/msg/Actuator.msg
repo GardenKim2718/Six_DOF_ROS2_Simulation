@@ -1,6 +1,6 @@
-# Command.msg
+# Actuator.msg
 # ------------------------------------------------------------------
-# 3D force/torque command for spacecraft's actuators
+# Output force and torque command from spacecraft's actuators
 #
 # Coordinate conventions (recommended):
 # - force  : body frame [N]
