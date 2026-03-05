@@ -8,7 +8,8 @@
  * @date      2026-02-26 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-03-01 edited by Chungwon Kim (added linear guidance logic based on Apollo Powered Descent Guidance)
  *            2026-03-03 edited by Chungwon Kim (added rotational guidance logic based on Apollo Powered Descent Guidance application on attitude guidance)
- *            2026-03-05 updated to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim due to addition of navigation
  */
 
 #ifndef __guidance_node_hpp__
@@ -22,7 +23,7 @@
 #include <mutex>
 #include <chrono>
 
-#include "interfaces/msg/state.hpp"
+#include "interfaces/msg/navigation.hpp"
 #include "interfaces/msg/guidance.hpp"
 #include "interfaces/msg/target.hpp"
 
@@ -36,7 +37,7 @@ public:
   Guidance();
   ~Guidance();
 
-  void Init(const interfaces::msg::State& initial_state);
+  void Init(const interfaces::msg::Navigation& initial_state);
   void Run();
   void GetParameters();
 
@@ -44,12 +45,12 @@ public:
     // add your member functions and variables here
 
     // Callback function for command subscription
-    inline void CallbackState(
-        const interfaces::msg::State::SharedPtr msg)
+    inline void CallbackNavigation(
+        const interfaces::msg::Navigation::SharedPtr msg)
     {
-        std::lock_guard<std::mutex> lock(mutex_state_);
+        std::lock_guard<std::mutex> lock(mutex_navigation_);
         last_state_ = *msg;
-        b_simulator_initialized_ = true;
+        b_navigation_initialized_ = true;
     }
 
     // Custom Functions
@@ -96,10 +97,10 @@ public:
     // topics
     rclcpp::Publisher<interfaces::msg::Guidance>::SharedPtr pub_guidance_;
     rclcpp::Publisher<interfaces::msg::Target>::SharedPtr pub_target_;
-    rclcpp::Subscription<interfaces::msg::State>::SharedPtr sub_state_;  
+    rclcpp::Subscription<interfaces::msg::Navigation>::SharedPtr sub_navigation_;  
 
     // mutex
-    std::mutex mutex_state_;
+    std::mutex mutex_navigation_;
 
     // Steady clock
     rclcpp::Clock::SharedPtr steady_clock_;
@@ -108,7 +109,7 @@ public:
     rclcpp::TimerBase::SharedPtr t_run_node_;
 
     // input
-    interfaces::msg::State last_state_;
+    interfaces::msg::Navigation last_state_;
 
     // output
     interfaces::msg::Guidance o_guidance_;
@@ -157,7 +158,7 @@ public:
     double angular_kd_ = 1.0;   // derivative gain for angular guidance
 
     // declare additional variables for yourself
-    bool b_simulator_initialized_ = false;
+    bool b_navigation_initialized_ = false;
     bool b_guidance_initialized_ = false;
     
     bool b_linear_guidance_initialized_ = false;

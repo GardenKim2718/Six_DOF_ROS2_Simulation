@@ -8,7 +8,8 @@
  * @date      2026-02-09 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-02-13 expanded by Chungwon Kim for 6-DOF control
  *            2026-03-03 edited by Chungwon Kim for Guidance-Command interface update
- *            2026-03-05 updated to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim due to addition of navigation
  */
 
 #ifndef __control_node_hpp__
@@ -45,12 +46,12 @@ public:
     // add your member functions and variables here
 
     // Callback function for command subscription
-    inline void CallbackState(
+    inline void CallbackNavigation(
         const interfaces::msg::Navigation::SharedPtr msg)
     {
-        std::lock_guard<std::mutex> lock(mutex_state_);
+        std::lock_guard<std::mutex> lock(mutex_navigation_);
         last_state_ = *msg;
-        b_simulator_initialized_ = true;
+        b_navigation_initialized_ = true;
     }
 
     inline void CallbackTarget(
@@ -141,7 +142,7 @@ public:
     bool b_linear_guidance_active_ = false;
     bool b_angular_guidance_active_ = false;
 
-    bool b_simulator_initialized_ = false;
+    bool b_navigation_initialized_ = false;
     bool b_guidance_initialized_ = false;
     bool b_target_initialized_ = false;
     bool b_control_initialized_ = false;

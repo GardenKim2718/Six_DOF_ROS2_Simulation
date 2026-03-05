@@ -8,7 +8,8 @@
  * @date      2026-02-26 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-03-01 edited by Chungwon Kim (added linear guidance logic based on Apollo Powered Descent Guidance)
  *            2026-03-03 edited by Chungwon Kim (added rotational guidance logic based on Apollo Powered Descent Guidance application on attitude guidance)
- *            2026-03-05 updated to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim due to addition of navigation
  */
 
 #include "fsw/guidance_node.hpp"
@@ -68,9 +69,9 @@ Guidance::Guidance()
         target_wx_, target_wy_, target_wz_);
 
     // Subscribers Initialization
-    sub_state_ = this->create_subscription<interfaces::msg::State>(
-        "state", qos_profile,
-        std::bind(&Guidance::CallbackState, this, std::placeholders::_1));
+    sub_navigation_ = this->create_subscription<interfaces::msg::Navigation>(
+        "navigation", qos_profile,
+        std::bind(&Guidance::CallbackNavigation, this, std::placeholders::_1));
 
     // Publishers Initialization
     pub_guidance_ = this->create_publisher<interfaces::msg::Guidance>(
@@ -155,7 +156,7 @@ void Guidance::GetParameters()
     inertia_inv_ = inertia_.inverse();
 }
 
-void Guidance::Init(const interfaces::msg::State& initial_state)
+void Guidance::Init(const interfaces::msg::Navigation& initial_state)
 {
     // Log
     RCLCPP_INFO(this->get_logger(),
@@ -190,9 +191,9 @@ void Guidance::Init(const interfaces::msg::State& initial_state)
 void Guidance::Run()
 {
     // handle initialization
-    if (!b_simulator_initialized_) {
+    if (!b_navigation_initialized_) {
         RCLCPP_WARN(this->get_logger(),
-            "Waiting for simulator initialization...");
+            "Waiting for navigation initialization...");
         return;
     }
 
@@ -202,9 +203,9 @@ void Guidance::Run()
     }
 
     // get subscribed state
-    interfaces::msg::State current_state;
+    interfaces::msg::Navigation current_state;
     {
-        std::lock_guard<std::mutex> lock(mutex_state_);
+        std::lock_guard<std::mutex> lock(mutex_navigation_);
         current_state = last_state_;
         sim_time_curr_ = current_state.header.stamp;
     }

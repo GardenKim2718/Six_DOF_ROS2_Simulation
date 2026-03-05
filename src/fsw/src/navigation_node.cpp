@@ -98,6 +98,7 @@ void Navigation::Run()
     // publish navigation message
     // temporarily, just pass the state message as navigation message without any processing
     o_navigation_.id = current_state.id;
+    o_navigation_.header = current_state.header;
     o_navigation_.pose = current_state.pose;
     o_navigation_.vel = current_state.vel;
     pub_navigation_->publish(o_navigation_);
