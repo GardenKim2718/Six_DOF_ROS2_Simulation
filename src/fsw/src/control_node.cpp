@@ -8,7 +8,8 @@
  * @date      2026-02-09 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-02-13 expanded by Chungwon Kim for 6-DOF control
  *            2026-03-03 edited by Chungwon Kim for Guidance-Command interface update
- *            2026-03-05 updated to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim due to addition of navigation
  */
 
 #include "fsw/control_node.hpp"
@@ -58,9 +59,9 @@ Control::Control()
         angular_kp_, angular_kd_, angular_ki_);
 
     // Subscribers Initialization
-    sub_state_ = this->create_subscription<interfaces::msg::State>(
-        "state", qos_profile,
-        std::bind(&Control::CallbackState, this, std::placeholders::_1));
+    sub_navigation_ = this->create_subscription<interfaces::msg::Navigation>(
+        "navigation", qos_profile,
+        std::bind(&Control::CallbackNavigation, this, std::placeholders::_1));
 
     sub_guidance_ = this->create_subscription<interfaces::msg::Guidance>(
         "guidance", qos_profile,
@@ -132,7 +133,7 @@ void Control::GetParameters()
     inertia_inv_ = inertia_.inverse();
 }
 
-void Control::Init(const interfaces::msg::State& initial_state)
+void Control::Init(const interfaces::msg::Navigation& initial_state)
 {
     // Log
     RCLCPP_INFO(this->get_logger(),
@@ -154,9 +155,9 @@ void Control::Init(const interfaces::msg::State& initial_state)
 void Control::Run()
 {
     // handle initialization
-    if (!b_simulator_initialized_ || !b_guidance_initialized_ || !b_target_initialized_) {
+    if (!b_navigation_initialized_ || !b_guidance_initialized_ || !b_target_initialized_) {
         RCLCPP_WARN(this->get_logger(),
-            "Waiting for simulator and guidance initialization...");
+            "Waiting for navigation and guidance initialization...");
         return;
     }
 
@@ -165,10 +166,10 @@ void Control::Run()
         b_control_initialized_ = true;
     }
 
-    // get subscribed state
-    interfaces::msg::State current_state;
+    // get subscribed navigation
+    interfaces::msg::Navigation current_state;
     {
-        std::lock_guard<std::mutex> lock(mutex_state_);
+        std::lock_guard<std::mutex> lock(mutex_navigation_);
         current_state = last_state_;
         sim_time_curr_ = current_state.header.stamp;
     }

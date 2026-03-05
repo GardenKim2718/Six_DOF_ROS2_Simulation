@@ -6,17 +6,18 @@
  * @brief     simulator node source file
  *
  * @date      2026-02-11 created by Chungwon Kim (gardenkim@kaist.ac.kr)
- *            2026-03-05 updated to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim due to addition of actuator node
  */
 
 #include "simulation/simulator_node.hpp"
 
 using interfaces::msg::State;
-using interfaces::msg::Command;
+using interfaces::msg::Actuator;
 
 StateDerivative Simulator::ComputeStateDerivative(
     const State &state,
-    const Command &cmd)
+    const Actuator &cmd)
 {
   StateDerivative derivative{};
 
@@ -105,7 +106,7 @@ State Simulator::AddScaledDerivative(
 
 State Simulator::PropagateStateRK4(
     const State &prev,
-    const Command &cmd,
+    const Actuator &cmd,
     const double dt)
 {
   // RK4
@@ -237,9 +238,9 @@ Simulator::Simulator()
   last_cmd_.torque.z = 0.0;
 
   // Subscribers Initialization
-  sub_command_ = this->create_subscription<Command>(
-  "command", qos_profile,
-  std::bind(&Simulator::CallbackCommand, this, std::placeholders::_1));
+  sub_actuator_ = this->create_subscription<Actuator>(
+  "actuator", qos_profile,
+  std::bind(&Simulator::CallbackActuator, this, std::placeholders::_1));
 
   // Publishers Initialization
   pub_state_ = this->create_publisher<State>(
@@ -343,9 +344,9 @@ void Simulator::Run()
   real_time_prev_ = current_time;
 
   // propagate state
-  Command cmd;
+  Actuator cmd;
   {
-    std::lock_guard<std::mutex> lock(mutex_command_);
+    std::lock_guard<std::mutex> lock(mutex_actuator_);
     cmd = last_cmd_;
   }
   o_state_ = PropagateStateRK4(o_state_, cmd, time_dt);

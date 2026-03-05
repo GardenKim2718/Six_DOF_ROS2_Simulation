@@ -3,7 +3,7 @@
 <package format="3">
   <name>fsw</name>
   <version>0.0.0</version>
-  <description>Guidance and Control package for 6-DOF simulation</description>
+  <description>Guidance, Navigation, Control, and Actuator package for 6-DOF simulation</description>
   <maintainer email="gardenkim2718@gmail.com">helios</maintainer>
   <license>Limited Distribution and restricted disclosure only</license>
 

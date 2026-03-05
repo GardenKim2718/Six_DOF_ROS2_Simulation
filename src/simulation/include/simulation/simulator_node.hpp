@@ -6,7 +6,8 @@
  * @brief     simulator node header file
  *
  * @date      2026-02-11 created by Chungwon Kim (gardenkim@kaist.ac.kr)
- *            2026-03-05 updated to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim to use steady clock instead of wall timer
+ *            2026-03-05 updated by Chungwon Kim due to addition of actuator node
  */
 
 #ifndef __simulator_node_hpp__
@@ -22,7 +23,7 @@
 #include <chrono>
 
 #include "interfaces/msg/state.hpp"
-#include "interfaces/msg/command.hpp"
+#include "interfaces/msg/actuator.hpp"
 #include "interfaces/msg/guidance.hpp"
 #include "interfaces/msg/target.hpp"
 
@@ -58,11 +59,11 @@ public:
     void GetParameters();
 
 private:
-    // Callback function for command subscription
-    inline void CallbackCommand(
-        const interfaces::msg::Command::SharedPtr msg)
+    // Callback function for actuator subscription
+    inline void CallbackActuator(
+        const interfaces::msg::Actuator::SharedPtr msg)
     {
-        std::lock_guard<std::mutex> lock(mutex_command_);
+        std::lock_guard<std::mutex> lock(mutex_actuator_);
         last_cmd_ = *msg;
     }
 
@@ -77,7 +78,7 @@ private:
 
     StateDerivative ComputeStateDerivative(
         const interfaces::msg::State &state,
-        const interfaces::msg::Command &cmd);
+        const interfaces::msg::Actuator &cmd);
 
     interfaces::msg::State AddScaledDerivative(
         const interfaces::msg::State& s,
@@ -86,15 +87,15 @@ private:
 
     interfaces::msg::State PropagateStateRK4(
         const interfaces::msg::State &prev,
-        const interfaces::msg::Command &cmd,
+        const interfaces::msg::Actuator &cmd,
         const double dt);
 
     // topics
-    rclcpp::Subscription<interfaces::msg::Command>::SharedPtr sub_command_;
+    rclcpp::Subscription<interfaces::msg::Actuator>::SharedPtr sub_actuator_;
     rclcpp::Publisher<interfaces::msg::State>::SharedPtr pub_state_;  
 
     // mutex
-    std::mutex mutex_command_;
+    std::mutex mutex_actuator_;
 
     // Steady clock
     rclcpp::Clock::SharedPtr steady_clock_;
@@ -103,7 +104,7 @@ private:
     rclcpp::TimerBase::SharedPtr t_run_node_;
 
     // input
-    interfaces::msg::Command last_cmd_;
+    interfaces::msg::Actuator last_cmd_;
 
     // states
     interfaces::msg::State o_initial_state_;

@@ -22,6 +22,8 @@ set(MSG_FILES
     "msg/Command.msg"
     "msg/State.msg"
     "msg/Target.msg"
+    "msg/Navigation.msg"
+    "msg/Actuator.msg"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

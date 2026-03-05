@@ -1,4 +1,18 @@
 <launch>
+  <!-- FSW Package Launch File -->
+
+  <!-- Navigation Node -->
+  <node
+    pkg="fsw"
+    exec="navigation_node"
+    name="navigation_node"
+    output="screen">
+
+    <!-- node parameters -->
+    <param name="loop_rate_hz" value="8.0"/>
+
+  </node>
+
   <!-- Guidance Node -->
   <node
     pkg="fsw"
@@ -77,5 +91,17 @@
     <!-- Hardware Limits -->
     <param name="max_force" value="1.0"/>
     <param name="max_torque" value="1.0"/>
+  </node>
+
+  <!-- Actuator Node -->
+  <node
+    pkg="fsw"
+    exec="actuator_node"
+    name="actuator_node"
+    output="screen">
+
+    <!-- node parameters -->
+    <param name="loop_rate_hz" value="8.0"/>
+
   </node>
 </launch>
