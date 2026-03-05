@@ -100,7 +100,7 @@ public:
     std::mutex mutex_target_;
 
     // Steady clock
-    rclcpp::Clock steady_clock{RCL_STEADY_TIME};
+    rclcpp::Clock::SharedPtr steady_clock_;
 
     // timer
     rclcpp::TimerBase::SharedPtr t_run_node_;

@@ -48,10 +48,21 @@ Display::Display(double &loop_rate_hz_)
     q_offset.setRPY(M_PI/2.0, 0.0, 0.0);    // rotate mesh to align with x-forward
     q_offset.normalize();
 
-    // Create Timer
-    t_run_node_ = this->create_wall_timer(
-        std::chrono::milliseconds((int64_t)(1000 / loop_rate_hz_)),
-        [this]() { this->Run(); });
+    // Steady clock initialization
+    steady_clock_ = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
+
+    // Timer Initialization
+    const auto period_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::duration<double>(1.0 / loop_rate_hz_));
+
+    t_run_node_ = rclcpp::create_timer(
+        this->get_node_base_interface(),
+        this->get_node_timers_interface(),
+        steady_clock_,
+        period_ns,
+        std::bind(&Display::Run, this)
+    );
 }
 
 Display::~Display()

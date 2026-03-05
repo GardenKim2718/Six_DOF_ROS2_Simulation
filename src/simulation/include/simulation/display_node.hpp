@@ -77,6 +77,9 @@ class Display : public rclcpp::Node {
     std::mutex mutex_state_;
     std::mutex mutex_target_;
 
+    // Steady clock
+    rclcpp::Clock::SharedPtr steady_clock_;
+
     // timer
     rclcpp::TimerBase::SharedPtr t_run_node_;
 

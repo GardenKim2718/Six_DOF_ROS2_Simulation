@@ -77,14 +77,25 @@ Guidance::Guidance()
     
     pub_target_ = this->create_publisher<interfaces::msg::Target>(
         "target", qos_profile);
+
+    // Steady clock initialization
+    steady_clock_ = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
     
     // Timer Initialization
-    rclcpp::Time current_time = steady_clock.now();
+    rclcpp::Time current_time = steady_clock_->now();
 
+    const auto period_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::duration<double>(1.0 / loop_rate_hz_));
+    
     // Run Contol Loop
-    t_run_node_ = this->create_wall_timer(
-        std::chrono::milliseconds((int64_t)(1000 / loop_rate_hz_)),
-        [this]() { this->Run(); });
+    t_run_node_ = rclcpp::create_timer(
+        this->get_node_base_interface(),
+        this->get_node_timers_interface(),
+        steady_clock_,
+        period_ns,
+        std::bind(&Guidance::Run, this)
+    );
 }
 
 Guidance::~Guidance()

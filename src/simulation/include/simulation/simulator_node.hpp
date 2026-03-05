@@ -57,9 +57,6 @@ public:
     void GetParameters();
 
 private:
-    // Steady clock
-    rclcpp::Clock steady_clock{RCL_STEADY_TIME};
-
     // Callback function for command subscription
     inline void CallbackCommand(
         const interfaces::msg::Command::SharedPtr msg)
@@ -97,6 +94,9 @@ private:
 
     // mutex
     std::mutex mutex_command_;
+
+    // Steady clock
+    rclcpp::Clock::SharedPtr steady_clock_;
 
     // timer
     rclcpp::TimerBase::SharedPtr t_run_node_;
