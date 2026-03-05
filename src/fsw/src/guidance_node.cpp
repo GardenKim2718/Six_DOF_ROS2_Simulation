@@ -235,7 +235,7 @@ void Guidance::Run()
         {
             b_linear_guidance_active_ = false;
             RCLCPP_WARN(this->get_logger(),
-                "Deactivating linear guidance, Time to Go : %.3f s", T_go_linear_min_);
+                "Deactivating linear guidance, Time to Go : %.3f s", T_go_linear_);
         }
     }
 

@@ -234,7 +234,7 @@ void Control::Run()
         torque_command = angular_kp_ * err_quat_vec
                         + angular_kd_ * err_ang_vel_
                         + angular_ki_ * integral_err_quat_
-                        - w_current.cross(inertia_ * w_current);
+                        + w_current.cross(inertia_ * w_current);
     }
 
     if (torque_command.norm() > max_torque_) {
@@ -281,7 +281,7 @@ void Control::Run()
 
         acc_command_inertial = linear_kp_ * err_pos_
                             + linear_kd_ * err_vel_
-                            + linear_ki_ * integral_err_pos_;        
+                            + linear_ki_ * integral_err_pos_;
     }
 
     Eigen::Matrix3d D_I2B = q_current.toRotationMatrix();
