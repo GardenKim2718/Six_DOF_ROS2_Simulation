@@ -8,6 +8,7 @@
  * @date      2026-02-09 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-02-13 expanded by Chungwon Kim for 6-DOF control
  *            2026-03-03 edited by Chungwon Kim for Guidance-Command interface update
+ *            2026-03-05 updated to use steady clock instead of wall timer
  */
 
 #ifndef __control_node_hpp__
@@ -100,7 +101,7 @@ public:
     std::mutex mutex_target_;
 
     // Steady clock
-    rclcpp::Clock steady_clock{RCL_STEADY_TIME};
+    rclcpp::Clock::SharedPtr steady_clock_;
 
     // timer
     rclcpp::TimerBase::SharedPtr t_run_node_;

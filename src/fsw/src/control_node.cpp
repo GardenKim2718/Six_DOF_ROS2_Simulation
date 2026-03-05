@@ -8,6 +8,7 @@
  * @date      2026-02-09 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-02-13 expanded by Chungwon Kim for 6-DOF control
  *            2026-03-03 edited by Chungwon Kim for Guidance-Command interface update
+ *            2026-03-05 updated to use steady clock instead of wall timer
  */
 
 #include "fsw/control_node.hpp"
@@ -72,14 +73,25 @@ Control::Control()
     // Publishers Initialization
     pub_command_ = this->create_publisher<interfaces::msg::Command>(
         "command", qos_profile);
-    
+
+    // Steady clock initialization
+    steady_clock_ = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
+
     // Timer Initialization
-    rclcpp::Time current_time = steady_clock.now();
+    rclcpp::Time current_time = steady_clock_->now();
 
     // Run Contol Loop
-    t_run_node_ = this->create_wall_timer(
-        std::chrono::milliseconds((int64_t)(1000 / loop_rate_hz_)),
-        [this]() { this->Run(); });
+    const auto period_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::duration<double>(1.0 / loop_rate_hz_));
+
+    t_run_node_ = rclcpp::create_timer(
+        this->get_node_base_interface(),
+        this->get_node_timers_interface(),
+        steady_clock_,
+        period_ns,
+        std::bind(&Control::Run, this)
+    );
 }
 
 Control::~Control()
@@ -234,7 +246,7 @@ void Control::Run()
         torque_command = angular_kp_ * err_quat_vec
                         + angular_kd_ * err_ang_vel_
                         + angular_ki_ * integral_err_quat_
-                        - w_current.cross(inertia_ * w_current);
+                        + w_current.cross(inertia_ * w_current);
     }
 
     if (torque_command.norm() > max_torque_) {
@@ -281,7 +293,7 @@ void Control::Run()
 
         acc_command_inertial = linear_kp_ * err_pos_
                             + linear_kd_ * err_vel_
-                            + linear_ki_ * integral_err_pos_;        
+                            + linear_ki_ * integral_err_pos_;
     }
 
     Eigen::Matrix3d D_I2B = q_current.toRotationMatrix();

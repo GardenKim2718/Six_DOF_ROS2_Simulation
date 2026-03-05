@@ -11,9 +11,9 @@
 
     <!-- target parameters-->
     <param name="target_x" value="10.0"/>
-    <param name="target_y" value="0.0"/>
+    <param name="target_y" value="5.0"/>
     <param name="target_z" value="0.0"/>
-    <param name="target_vx" value="1.0"/>
+    <param name="target_vx" value="0.0"/>
     <param name="target_vy" value="0.0"/>
     <param name="target_vz" value="0.0"/>
 

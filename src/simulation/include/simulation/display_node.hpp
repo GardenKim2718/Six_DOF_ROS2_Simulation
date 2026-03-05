@@ -6,6 +6,7 @@
  * @brief     display node header file
  *
  * @date      2026-02-11 created by Chungwon Kim (gardenkim@kaist.ac.kr)
+ *            2026-03-05 updated to use steady clock instead of wall timer
  */
 
 #define __display_node_hpp__
@@ -76,6 +77,9 @@ class Display : public rclcpp::Node {
     // mutex
     std::mutex mutex_state_;
     std::mutex mutex_target_;
+
+    // Steady clock
+    rclcpp::Clock::SharedPtr steady_clock_;
 
     // timer
     rclcpp::TimerBase::SharedPtr t_run_node_;

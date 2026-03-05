@@ -6,6 +6,7 @@
  * @brief     simulator node source file
  *
  * @date      2026-02-11 created by Chungwon Kim (gardenkim@kaist.ac.kr)
+ *            2026-03-05 updated to use steady clock instead of wall timer
  */
 
 #include "simulation/simulator_node.hpp"
@@ -244,14 +245,25 @@ Simulator::Simulator()
   pub_state_ = this->create_publisher<State>(
     "state", qos_profile);
 
-  // Timer Initialization
-  rclcpp::Time current_time = steady_clock.now();
-  real_time_prev_ = current_time;
-  sim_time_prev_ = rclcpp::Time(initial_time_);
+  // Steady clock initialization
+  steady_clock_ = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
 
-  t_run_node_ = this->create_wall_timer(
-      std::chrono::milliseconds((int64_t)(1000 / loop_rate_hz_)),
-      [this]() { this->Run(); }); 
+  // Timer Initialization
+  rclcpp::Time current_time = steady_clock_->now();
+  real_time_prev_ = current_time;
+  sim_time_prev_  = rclcpp::Time(initial_time_);
+
+  const auto period_ns =
+    std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::duration<double>(1.0 / loop_rate_hz_));
+
+  t_run_node_ = rclcpp::create_timer(
+    this->get_node_base_interface(),
+    this->get_node_timers_interface(),
+    steady_clock_,
+    period_ns,
+    std::bind(&Simulator::Run, this)
+  );
 
   // Simulator Initialization
   o_initial_state_.header.frame_id = frame_id_;
@@ -313,8 +325,10 @@ void Simulator::GetParameters()
 
 void Simulator::Run()
 {
+  // RCLCPP_INFO(this->get_logger(), "Run() tick");
+
   // time
-  auto current_time = steady_clock.now();
+  rclcpp::Time current_time = steady_clock_->now();
 
   // time interval
   double time_dt = (current_time - real_time_prev_).seconds();

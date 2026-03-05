@@ -8,6 +8,7 @@
  * @date      2026-02-26 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-03-01 edited by Chungwon Kim (added linear guidance logic based on Apollo Powered Descent Guidance)
  *            2026-03-03 edited by Chungwon Kim (added rotational guidance logic based on Apollo Powered Descent Guidance application on attitude guidance)
+ *            2026-03-05 updated to use steady clock instead of wall timer
  */
 
 #ifndef __guidance_node_hpp__
@@ -72,23 +73,25 @@ public:
     }
 
     void LinearGuidance(
-        const interfaces::msg::State &current_state,
-        const interfaces::msg::Target &target_state,
-        double &T_go_linear_, const double acc_limit_,
-        Eigen::Vector3d& accel_cmd_,
-        bool &b_linear_guidance_active_);
+        const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
+        const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
+        double& T_go_linear_, Eigen::Vector3d& accel_cmd_);
+    
+    void FindTimeToGoLinear(
+        const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
+        const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
+        const double acc_limit);
 
     bool ApolloPoweredDescentGuidanceValidate(
         const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
         const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
-        const double T_go, const double acc_limit_);
+        const double T_go, const double acc_limit);
 
     void AngularGuidance(
-        const interfaces::msg::State &current_state,
-        const interfaces::msg::Target &target_state,
+        const Eigen::Quaterniond err_quat,
+        const Eigen::Vector3d curr_ang_speed, const Eigen::Vector3d target_ang_vel,
         double &T_go_angular_, const double ang_acc_limit_,
-        Eigen::Vector3d &ang_accel_cmd_,
-        bool &b_angular_guidance_active_);
+        Eigen::Vector3d &ang_accel_cmd_, bool &b_angular_guidance_active_);
     
     // topics
     rclcpp::Publisher<interfaces::msg::Guidance>::SharedPtr pub_guidance_;
@@ -99,7 +102,7 @@ public:
     std::mutex mutex_state_;
 
     // Steady clock
-    rclcpp::Clock steady_clock{RCL_STEADY_TIME};
+    rclcpp::Clock::SharedPtr steady_clock_;
 
     // timer
     rclcpp::TimerBase::SharedPtr t_run_node_;
@@ -156,6 +159,12 @@ public:
     // declare additional variables for yourself
     bool b_simulator_initialized_ = false;
     bool b_guidance_initialized_ = false;
+    
+    bool b_linear_guidance_initialized_ = false;
+    bool b_angular_guidance_initialized_ = false;
+
+    bool b_linear_guidance_active_ = true;
+    bool b_angular_guidance_active_ = true;
 
     rclcpp::Time sim_time_prev_;
     rclcpp::Time sim_time_curr_;
@@ -183,9 +192,6 @@ public:
 
     Eigen::Vector3d accel_cmd_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d ang_accel_cmd_ = Eigen::Vector3d::Zero();
-
-    bool b_linear_guidance_active_ = true;
-    bool b_angular_guidance_active_ = true;
 };
 
 #endif  // __guidance_node_hpp__
