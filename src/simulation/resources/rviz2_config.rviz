@@ -80,7 +80,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Fixed Frame: map
-    Frame Rate: 30
+    Frame Rate: 8
   Name: root
   Tools:
     - Class: rviz_default_plugins/Interact
@@ -134,9 +134,9 @@ Visualization Manager:
       Pitch: 1.4097964763641357
       Point towards: -z axis
       Position:
-        X: -2.6901330947875977
-        Y: 0.1883687973022461
-        Z: 20.182727813720703
+        X: -1.3468661308288574
+        Y: 0.09418445825576782
+        Z: 11.891363143920898
       Target Frame: Ego_frame
       Value: FrameAligned (rviz_default_plugins)
       Yaw: 6.213183879852295
@@ -176,5 +176,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 431
-  Y: -7
+  X: -3
+  Y: 27
