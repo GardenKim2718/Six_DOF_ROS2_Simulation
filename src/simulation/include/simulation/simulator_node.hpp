@@ -55,7 +55,7 @@ public:
     ~Simulator();
 
     void Run();
-    inline interfaces::msg::State GetInitialState() const { return o_initial_state_; };
+    void Init();
     void GetParameters();
 
 private:
@@ -107,7 +107,7 @@ private:
     interfaces::msg::Actuator last_cmd_;
 
     // states
-    interfaces::msg::State o_initial_state_;
+    interfaces::msg::State initial_state_;
     interfaces::msg::State o_state_;
 
     // time
@@ -121,14 +121,22 @@ private:
     double loop_rate_hz_{100.0};
 
     // declare the additional variables for yourself
-    std::string frame_id_ = "world";
+    bool sim_initialized_{false};
 
     double mass_{1.0};
     Eigen::Matrix3d inertia_;
     Eigen::Matrix3d inertia_inv_;
 
-    double max_force_{10.0};
-    double max_torque_{10.0};
+    // thruster configuration (12 thrusters)
+    Eigen::Matrix<double, 3, 12> thruster_positions_;
+    Eigen::Matrix<double, 3, 12> thruster_directions_;
+    double max_thrust_{1.0};  // maximum thrust per thruster [N]
+
+    // RWA configuration (4 RWAs)
+    Eigen::Matrix<double, 3, 4> rwa_mounting_matrix_;
+    Eigen::Matrix<double, 4, 3> rwa_mounting_matrix_pseudo_inv_;
+    double max_rwa_momentum_{0.1};  // maximum momentum storage of each RWA [N*m*s]
+    double max_rwa_torque_{0.01};  // maximum torque of each RWA [N*m]
 };
 
 #endif  // __simulator_node_hpp__

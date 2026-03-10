@@ -13,8 +13,8 @@
 # Optional identifier for multi-agent systems
 string id    # robot/agent name (e.g., "robot1")
 
-# 3D force command, typically expressed in body frame
-geometry_msgs/Vector3 force   # [N], (fx, fy, fz)
+# Thruster command (12 thruster)
+float64[12] thruster_cmd  # thruster_cmd[0-11]  [N]
 
-# 3D torque command, typically expressed in body frame
-geometry_msgs/Vector3 torque  # [N*m], (tx, ty, tz)
+# RWA command (4 RWA case)
+float64[4] rwa_torque_cmd  # rwa_torque_cmd[0-3]  [N*m]
