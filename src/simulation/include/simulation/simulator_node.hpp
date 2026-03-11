@@ -46,6 +46,7 @@ struct StateDerivative
     double dwx;
     double dwy;
     double dwz;
+    double drwa_momentum[4];
 };
 
 class Simulator : public rclcpp::Node
@@ -126,6 +127,7 @@ private:
     double mass_{1.0};
     Eigen::Matrix3d inertia_;
     Eigen::Matrix3d inertia_inv_;
+    Eigen::Vector3d center_of_mass_;
 
     // thruster configuration (12 thrusters)
     Eigen::Matrix<double, 3, 12> thruster_positions_;
@@ -134,7 +136,6 @@ private:
 
     // RWA configuration (4 RWAs)
     Eigen::Matrix<double, 3, 4> rwa_mounting_matrix_;
-    Eigen::Matrix<double, 4, 3> rwa_mounting_matrix_pseudo_inv_;
     double max_rwa_momentum_{0.1};  // maximum momentum storage of each RWA [N*m*s]
     double max_rwa_torque_{0.01};  // maximum torque of each RWA [N*m]
 };
