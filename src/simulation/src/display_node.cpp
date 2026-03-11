@@ -113,7 +113,7 @@ void Display::DisplayState(const rclcpp::Time& time,
     ego_marker.header.stamp = time;
     ego_marker.header.frame_id = state.header.frame_id;
     ego_marker.id = 0;
-    ego_marker.lifetime = rclcpp::Duration(0, int64_t(1.0*1e9)); // 1.0 sec
+    ego_marker.lifetime = rclcpp::Duration(0, int64_t(0.125*1e9)); // 0.125 sec
     ego_marker.action = visualization_msgs::msg::Marker::ADD;
 
     ego_marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
@@ -157,7 +157,7 @@ void Display::DisplayState(const rclcpp::Time& time,
     speed_marker.ns = state.id + "_speed";
     speed_marker.id = 0;
     speed_marker.action = visualization_msgs::msg::Marker::ADD;
-    speed_marker.lifetime = rclcpp::Duration(0, int64_t(1.0*1e9)); // 1.0 sec
+    speed_marker.lifetime = rclcpp::Duration(0, int64_t(0.125*1e9)); // 0.125 sec
     speed_marker.type = visualization_msgs::msg::Marker::ARROW;
 
     // Arrow origin at ego position
