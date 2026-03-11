@@ -22,10 +22,10 @@ StateDerivative Simulator::ComputeStateDerivative(
 {
     // RWA momentum
     Eigen::Vector4d rwa_momentum(
-        current_state.rwa_momentum[0],
-        current_state.rwa_momentum[1],
-        current_state.rwa_momentum[2],
-        current_state.rwa_momentum[3]);
+        state.rwa_momentum[0],
+        state.rwa_momentum[1],
+        state.rwa_momentum[2],
+        state.rwa_momentum[3]);
 
     // actuator commands
     Eigen::Matrix<double, 12, 1> thruster_cmd =

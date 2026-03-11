@@ -150,6 +150,21 @@ void Control::Init(const interfaces::msg::Navigation& initial_state)
     o_command_.torque.x = 0.0;
     o_command_.torque.y = 0.0;
     o_command_.torque.z = 0.0;
+
+    // RWA configuration
+    rwa_mounting_matrix_ <<
+        -1, -1,  1,  1,
+        -1,  1,  1, -1,
+         1,  1,  1,  1;
+    
+    for (int i = 0; i < rwa_mounting_matrix_.cols(); ++i)
+    {
+        const double n = rwa_mounting_matrix_.col(i).norm();
+        if (n > 1e-12)
+        {
+            rwa_mounting_matrix_.col(i) /= n;
+        }
+    }
 }
 
 void Control::Run()

@@ -161,6 +161,9 @@ public:
     Eigen::Quaterniond prev_err_quat_ = Eigen::Quaterniond::Identity();
     Eigen::Vector3d err_ang_vel_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d integral_err_quat_ = Eigen::Vector3d::Zero();   // error quaternion vector part integration
+
+    // RWA configuration
+    Eigen::Matrix<double, 3, 4> rwa_mounting_matrix_;
 };
 
 #endif  // __control_node_hpp__
