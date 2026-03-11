@@ -208,6 +208,14 @@ void Control::Run()
         current_state.vel.angular.x,
         current_state.vel.angular.y,
         current_state.vel.angular.z);
+    
+    Eigen::Vector4d rwa_momentum(
+        current_state.rwa_momentum[0],
+        current_state.rwa_momentum[1],
+        current_state.rwa_momentum[2],
+        current_state.rwa_momentum[3]);
+
+    Eigen::Vector3d h_body = inertia_ * w_current + rwa_mounting_matrix_ * rwa_momentum;
 
     Eigen::Vector3d torque_command;
 
@@ -220,7 +228,7 @@ void Control::Run()
         
         // convert angular acceleration command to torque command
         torque_command = inertia_ * angular_acc_command +
-                         w_current.cross(inertia_ * w_current);
+                         w_current.cross(h_body);
     } else 
     {
         // Use PID control for attitude control near target (APDG inactive)
@@ -247,7 +255,7 @@ void Control::Run()
         torque_command = angular_kp_ * err_quat_vec
                         + angular_kd_ * err_ang_vel_
                         + angular_ki_ * integral_err_quat_
-                        + w_current.cross(inertia_ * w_current);
+                        + w_current.cross(h_body);
     }
 
     if (torque_command.norm() > max_torque_) {

@@ -21,7 +21,11 @@ StateDerivative Simulator::ComputeStateDerivative(
     const Actuator &cmd)
 {
     // RWA momentum
-    Eigen::Vector4d rwa_momentum(state.rwa_momentum.data());
+    Eigen::Vector4d rwa_momentum(
+        current_state.rwa_momentum[0],
+        current_state.rwa_momentum[1],
+        current_state.rwa_momentum[2],
+        current_state.rwa_momentum[3]);
 
     // actuator commands
     Eigen::Matrix<double, 12, 1> thruster_cmd =
@@ -110,8 +114,8 @@ StateDerivative Simulator::ComputeStateDerivative(
     derivative.dqw = 0.5 * qdot.w();
 
     // rotational dynamics (body frame)
-    const Eigen::Vector3d Iw = inertia_ * w_B;
-    const Eigen::Vector3d wdot_B = inertia_inv_ * (torque_body - w_B.cross(Iw));
+    const Eigen::Vector3d h_body = inertia_ * w_B + rwa_mounting_matrix_ * rwa_momentum;
+    const Eigen::Vector3d wdot_B = inertia_inv_ * (torque_body - w_B.cross(h_body));
 
     derivative.dwx = wdot_B.x();
     derivative.dwy = wdot_B.y();
