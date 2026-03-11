@@ -6,6 +6,7 @@
  * @brief     6-DOF actuator node header file
  *
  * @date      2026-03-05 created by Chungwon Kim (gardenkim@kaist.ac.kr)
+ *            2026-03-11 updated by Chungwon Kim to add control allocation for RWA and thrusters
  */
 
 #ifndef __actuator_node_hpp__

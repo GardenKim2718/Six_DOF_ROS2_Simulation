@@ -8,6 +8,7 @@
  * @date      2026-02-11 created by Chungwon Kim (gardenkim@kaist.ac.kr)
  *            2026-03-05 updated by Chungwon Kim to use steady clock instead of wall timer
  *            2026-03-05 updated by Chungwon Kim due to addition of actuator node
+ *            2026-03-11 updated by Chungwon Kim to add RWA and thruster dynamics
  */
 
 #include "simulation/simulator_node.hpp"

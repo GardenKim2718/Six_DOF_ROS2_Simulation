@@ -6,6 +6,7 @@
  * @brief     6-DOF navigation node source file
  *
  * @date      2026-03-05 created by Chungwon Kim (gardenkim@kaist.ac.kr)
+ *            2026-03-11 updated by Chungwon Kim due to addition of actuators
  */
 
 #include "fsw/navigation_node.hpp"
