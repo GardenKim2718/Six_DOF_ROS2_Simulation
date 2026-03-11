@@ -197,10 +197,10 @@ void Display::DisplayState(const rclcpp::Time& time,
     }
     q_vel.normalize();
 
-    speed_marker.pose.orientation.x = q_vel.x();
-    speed_marker.pose.orientation.y = q_vel.y();
-    speed_marker.pose.orientation.z = q_vel.z();
-    speed_marker.pose.orientation.w = q_vel.w();
+    speed_marker.pose.orientation.x = q_state.x();
+    speed_marker.pose.orientation.y = q_state.y();
+    speed_marker.pose.orientation.z = q_state.z();
+    speed_marker.pose.orientation.w = q_state.w();
 
     // Arrow scale based on speed
     const double min_arrow_len = 0.01;
@@ -299,10 +299,10 @@ void Display::DisplayTarget(const rclcpp::Time& time,
     tf_target.transform.translation.y = target.pose.position.y;
     tf_target.transform.translation.z = target.pose.position.z;
 
-    tf_target.transform.rotation.x = target.pose.orientation.x;
-    tf_target.transform.rotation.y = target.pose.orientation.y;
-    tf_target.transform.rotation.z = target.pose.orientation.z;
-    tf_target.transform.rotation.w = target.pose.orientation.w;
+    tf_target.transform.rotation.x = q_target.x();
+    tf_target.transform.rotation.y = q_target.y();
+    tf_target.transform.rotation.z = q_target.z();
+    tf_target.transform.rotation.w = q_target.w();
 
     tf_broadcaster_->sendTransform(tf_target);
 }

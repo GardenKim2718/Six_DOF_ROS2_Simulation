@@ -7,7 +7,6 @@ Panels:
         - /Global Options1
         - /Status1
         - /Axes1
-        - /Axes1/Status1
         - /Axes2
         - /Axes3
       Splitter Ratio: 0.5
@@ -23,7 +22,8 @@ Panels:
   - Class: rviz_common/Views
     Expanded:
       - /Current View1
-      - /FrameAligned1
+      - /Target_frame1
+      - /Inertial_frame1
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz_common/Time
@@ -149,12 +149,12 @@ Visualization Manager:
       Lock Camera: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: -1.5697963237762451
-      Point towards: +z axis
+      Pitch: 1.5697963237762451
+      Point towards: -z axis
       Position:
-        X: -0.008399796672165394
+        X: -0.0035999128594994545
         Y: 0
-        Z: -8.39999008178711
+        Z: 3.5999979972839355
       Target Frame: Ego_frame
       Value: FrameAligned (rviz_default_plugins)
       Yaw: 0
@@ -167,15 +167,53 @@ Visualization Manager:
           Value: false
         Invert Z Axis: false
         Lock Camera: false
-        Name: FrameAligned
+        Name: Ego_Frame
         Near Clip Distance: 0.009999999776482582
-        Pitch: -1.5697963237762451
-        Point towards: +z axis
+        Pitch: 1.5697963237762451
+        Point towards: -z axis
         Position:
-          X: 0
+          X: -0.0035999128594994545
           Y: 0
-          Z: 0
+          Z: 3.5999979972839355
         Target Frame: Ego_frame
+        Value: FrameAligned (rviz_default_plugins)
+        Yaw: 0
+      - Class: rviz_default_plugins/FrameAligned
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: false
+        Invert Z Axis: false
+        Lock Camera: false
+        Name: Target_frame
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 1.5697963237762451
+        Point towards: -z axis
+        Position:
+          X: -0.0035999128594994545
+          Y: 0
+          Z: 3.5999979972839355
+        Target Frame: Ego_target_frame
+        Value: FrameAligned (rviz_default_plugins)
+        Yaw: 0
+      - Class: rviz_default_plugins/FrameAligned
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: false
+        Invert Z Axis: false
+        Lock Camera: false
+        Name: Inertial_frame
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 1.5697963237762451
+        Point towards: -z axis
+        Position:
+          X: -0.027599338442087173
+          Y: 0
+          Z: 27.599977493286133
+        Target Frame: map
         Value: FrameAligned (rviz_default_plugins)
         Yaw: 0
 Window Geometry:
@@ -194,5 +232,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1908
-  X: 1920
-  Y: 0
+  X: 1888
+  Y: -32
