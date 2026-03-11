@@ -30,6 +30,8 @@
     <param name="initial_wx" value="0.0"/>
     <param name="initial_wy" value="0.0"/>
     <param name="initial_wz" value="0.0"/>
+    
+    <param name="initial_rwa_momentum" value="[0.0, 0.0, 0.0, 0.0]"/>
 
     <!-- Dynamic parameters-->
     <param name="mass" value="9.0877"/>
@@ -42,8 +44,9 @@
     <param name="inertia_yz" value="0.0"/>
 
     <!-- Hardware parameters-->
-    <param name="max_force" value="1.0"/>
-    <param name="max_torque" value="1.0"/>
+    <param name="max_thrust" value="1.0"/>
+    <param name="max_rwa_momentum" value="1.0"/>
+    <param name="max_rwa_torque" value="0.055"/>
   </node>
 
   <node
