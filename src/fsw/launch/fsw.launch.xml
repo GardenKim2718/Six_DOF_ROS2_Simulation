@@ -33,8 +33,8 @@
 
     <param name="target_qx" value="0.0"/>
     <param name="target_qy" value="0.0"/>
-    <param name="target_qz" value="0.0"/>
-    <param name="target_qw" value="1.0"/>
+    <param name="target_qz" value="0.25882"/>
+    <param name="target_qw" value="0.96593"/>
     <param name="target_wx" value="0.0"/>
     <param name="target_wy" value="0.0"/>
     <param name="target_wz" value="0.0"/>

@@ -47,7 +47,7 @@ Display::Display(double &loop_rate_hz_)
         "target_marker", qos_profile);
 
     // Initialize offset quaternion for model orientation adjustment
-    q_offset.setRPY(M_PI/2.0, 0.0, 0.0);    // rotate mesh to align with x-forward
+    q_offset.setRPY(M_PI/2.0, 0.0, M_PI);    // rotate mesh to align with x-forward
     q_offset.normalize();
 
     // Steady clock initialization
@@ -198,10 +198,10 @@ void Display::DisplayState(const rclcpp::Time& time,
     }
     q_vel.normalize();
 
-    speed_marker.pose.orientation.x = q_state.x();
-    speed_marker.pose.orientation.y = q_state.y();
-    speed_marker.pose.orientation.z = q_state.z();
-    speed_marker.pose.orientation.w = q_state.w();
+    speed_marker.pose.orientation.x = q_vel.x();
+    speed_marker.pose.orientation.y = q_vel.y();
+    speed_marker.pose.orientation.z = q_vel.z();
+    speed_marker.pose.orientation.w = q_vel.w();
 
     // Arrow scale based on speed
     const double min_arrow_len = 0.01;
