@@ -101,6 +101,7 @@ void Navigation::Run()
     o_navigation_.header = current_state.header;
     o_navigation_.pose = current_state.pose;
     o_navigation_.vel = current_state.vel;
+    o_navigation_.rwa_momentum = current_state.rwa_momentum;
     pub_navigation_->publish(o_navigation_);
 }
 

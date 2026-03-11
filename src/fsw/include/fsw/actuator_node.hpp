@@ -19,6 +19,7 @@
 #include <mutex>
 #include <chrono>
 
+#include "interfaces/msg/navigation.hpp"
 #include "interfaces/msg/command.hpp"
 #include "interfaces/msg/actuator.hpp"
 
@@ -48,14 +49,24 @@ public:
         b_control_initialized_ = true;
     }
 
+    inline void CallbackNavigation(
+        const interfaces::msg::Navigation::SharedPtr msg)
+    {
+        std::lock_guard<std::mutex> lock(mutex_navigation_);
+        last_state_ = *msg;
+        b_navigation_initialized_ = true;
+    }
+
     // Custom Functions
     
     // topics
     rclcpp::Publisher<interfaces::msg::Actuator>::SharedPtr pub_actuator_;
     rclcpp::Subscription<interfaces::msg::Command>::SharedPtr sub_command_;  
+    rclcpp::Subscription<interfaces::msg::Navigation>::SharedPtr sub_navigation_;
 
     // mutex
     std::mutex mutex_command_;
+    std::mutex mutex_navigation_;
 
     // Steady clock
     rclcpp::Clock::SharedPtr steady_clock_;
@@ -65,6 +76,7 @@ public:
 
     // input
     interfaces::msg::Command last_command_;
+    interfaces::msg::Navigation last_state_;
 
     // output
     interfaces::msg::Actuator o_actuator_;
@@ -74,6 +86,23 @@ public:
 
     // declare additional variables for yourself
     bool b_control_initialized_{false};
+    bool b_navigation_initialized_{false};
+
+    bool b_actuator_initialized_{false};
+
+    // Center of Mass Configuration
+    Eigen::Vector3d center_of_mass_;
+
+    // thruster configuration (12 thrusters)
+    Eigen::Matrix<double, 3, 12> thruster_positions_;
+    Eigen::Matrix<double, 3, 12> thruster_directions_;
+    double max_thrust_{1.0};  // maximum thrust per thruster [N]
+
+    // RWA configuration (4 RWAs)
+    Eigen::Matrix<double, 3, 4> rwa_mounting_matrix_;
+    Eigen::Matrix<double, 4, 3> rwa_mounting_matrix_pseudo_inverse_;
+    double max_rwa_momentum_{0.1};  // maximum momentum storage of each RWA [N*m*s]
+    double max_rwa_torque_{0.01};  // maximum torque of each RWA [N*m]
 };
 
 #endif  // __actuator_node_hpp__

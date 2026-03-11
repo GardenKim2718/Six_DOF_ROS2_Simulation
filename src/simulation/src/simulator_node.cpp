@@ -34,6 +34,8 @@ StateDerivative Simulator::ComputeStateDerivative(
         if (thruster_cmd(i) > max_thrust_)
         {
             thruster_cmd(i) = max_thrust_;
+        } else if (thruster_cmd(i) < 0.0) {
+            thruster_cmd(i) = 0.0;
         }
     }
 
@@ -316,11 +318,6 @@ Simulator::Simulator()
 
     // Steady clock initialization
     steady_clock_ = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
-
-    // // Timer Initialization
-    // rclcpp::Time current_time = steady_clock_->now();
-    // real_time_prev_ = current_time;
-    // sim_time_prev_ = rclcpp::Time(initial_time_);
 
     const auto period_ns =
         std::chrono::duration_cast<std::chrono::nanoseconds>(

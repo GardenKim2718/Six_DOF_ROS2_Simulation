@@ -28,6 +28,5 @@ geometry_msgs/Pose pose  # pose.position.x/y/z  [m]
 geometry_msgs/Twist vel  # vel.linear.x/y/z   [m/s]
                          # vel.angular.x/y/z  [rad/s]
 
-# # 3D acceleration = linear (m/s^2) + angular (rad/s^2) (disabled for now)
-# geometry_msgs/Accel accel # accel.linear.x/y/z   [m/s^2]
-#                           # accel.angular.x/y/z  [rad/s^2]
+# RWA momentum (4 RWA case) = rwa_momentum (N*m*s)
+float64[4] rwa_momentum  # rwa_momentum[0-3]  [N*m*s]

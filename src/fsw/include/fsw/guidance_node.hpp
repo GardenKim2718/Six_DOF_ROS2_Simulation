@@ -70,7 +70,7 @@ public:
             return Eigen::Quaterniond(-q.w(), -q.x(), -q.y(), -q.z());
         } else {
             return q;
-        }    
+        }
     }
 
     void LinearGuidance(
