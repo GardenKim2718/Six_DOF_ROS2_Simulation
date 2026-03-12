@@ -81,19 +81,19 @@ Visualization Manager:
       Reference Frame: map
       Value: true
     - Class: rviz_default_plugins/Axes
-      Enabled: true
+      Enabled: false
       Length: 1
       Name: Axes
       Radius: 0.10000000149011612
       Reference Frame: Ego_frame
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/Axes
-      Enabled: true
+      Enabled: false
       Length: 1
       Name: Axes
       Radius: 0.10000000149011612
       Reference Frame: Ego_target_frame
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -152,9 +152,9 @@ Visualization Manager:
       Pitch: 1.5697963237762451
       Point towards: -z axis
       Position:
-        X: -0.0035999128594994545
+        X: -0.009599776938557625
         Y: 0
-        Z: 3.5999979972839355
+        Z: 9.599992752075195
       Target Frame: Ego_frame
       Value: FrameAligned (rviz_default_plugins)
       Yaw: 0
@@ -232,5 +232,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1908
-  X: 1888
+  X: -32
   Y: -32

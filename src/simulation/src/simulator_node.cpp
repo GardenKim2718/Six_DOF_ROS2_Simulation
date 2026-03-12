@@ -301,6 +301,10 @@ Simulator::Simulator()
                 inertia_(0, 1), inertia_(0, 2), inertia_(1, 2));
 
     RCLCPP_INFO(this->get_logger(),
+        "Center of Mass: x=%.3f, y=%.3f, z=%.3f",
+        center_of_mass_(0), center_of_mass_(1), center_of_mass_(2));
+
+    RCLCPP_INFO(this->get_logger(),
                 "Thruster Limit: max_thrust=%.3f", max_thrust_);
 
     RCLCPP_INFO(this->get_logger(),

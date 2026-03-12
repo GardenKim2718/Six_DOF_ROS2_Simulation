@@ -59,8 +59,11 @@ class Display : public rclcpp::Node {
         b_is_target_initialized_ = true;
     }
 
-    void DisplayState(const rclcpp::Time& time, const interfaces::msg::State& state);
-    void DisplayTarget(const rclcpp::Time& time, const interfaces::msg::Target& target);
+    void DisplayState(const rclcpp::Time& time, const interfaces::msg::State& state,
+                      const rclcpp::Duration& duration);
+                      
+    void DisplayTarget(const rclcpp::Time& time, const interfaces::msg::Target& target,
+                       const rclcpp::Duration& duration);
 
     // subscriber topics
     rclcpp::Subscription<interfaces::msg::Target>::SharedPtr sub_target_;
@@ -83,6 +86,9 @@ class Display : public rclcpp::Node {
 
     // timer
     rclcpp::TimerBase::SharedPtr t_run_node_;
+
+    // loop rate
+    double loop_rate_hz_;
 
     // bool
     bool b_is_sim_initialized_ = false;

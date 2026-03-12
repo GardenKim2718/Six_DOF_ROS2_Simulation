@@ -175,7 +175,7 @@ void Actuator::Run()
                     current_state.rwa_momentum.data()[3];
 
     // compute actuator command from control command
-    // RWA command generation
+    //------------------------RWA Control Allocation------------------------//
     // use RWA prior to thruster for torque generation
     Eigen::Vector3d torque_cmd(
         current_command.torque.x,
@@ -193,7 +193,7 @@ void Actuator::Run()
     }
 
     for (int i = 0; i < 4; ++i) {   // check for RWA momentum saturation
-        if ((std::abs(rwa_momentum(i) >= max_rwa_momentum_)) &&
+        if ((std::abs(rwa_momentum(i)) >= max_rwa_momentum_) &&
             (rwa_momentum(i)*rwa_torque_cmd(i) < 0.0))
         {
             if (abs(rwa_momentum(i)) > max_rwa_momentum_) {
@@ -202,7 +202,9 @@ void Actuator::Run()
         }
     }
     Eigen::Vector3d rwa_torque_real = rwa_mounting_matrix_ * rwa_torque_cmd;
+    //-----------------end of RWA Control Allocation------------------------//
 
+    //---------------------Thruster Control Allocation----------------------//
     // Thruster command generation
     // construct thruster B matrix
     Eigen::Matrix<double, 6, 12> B_thruster;
@@ -239,6 +241,7 @@ void Actuator::Run()
             thruster_cmd(i) = max_thrust_;
         }
     }
+    //-----------------end of Thruster Control Allocation----------------------//
 
     // publish actuator command
     o_actuator_.id = current_command.id;

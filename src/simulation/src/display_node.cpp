@@ -18,7 +18,7 @@ Display::Display(double &loop_rate_hz_)
     RCLCPP_INFO(this->get_logger(), "Initialize Display node...");
     
     //QoS settings
-    auto qos_profile = rclcpp::QoS(rclcpp::KeepLast(10));
+    auto qos_profile = rclcpp::QoS(rclcpp::KeepLast(1));
     
     // TF2 broadcaster
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(*this);
@@ -47,7 +47,7 @@ Display::Display(double &loop_rate_hz_)
         "target_marker", qos_profile);
 
     // Initialize offset quaternion for model orientation adjustment
-    q_offset.setRPY(M_PI/2.0, 0.0, M_PI);    // rotate mesh to align with x-forward
+    q_offset.setRPY(M_PI/2.0, 0.0, M_PI/2.0);    // rotate mesh to align with x-forward
     q_offset.normalize();
 
     // Steady clock initialization
@@ -93,19 +93,45 @@ void Display::Run()
         target = last_target_;
     }
 
+    // time (using system time due to synchronization issues with RViz2)
+    rclcpp::Time current_time = this->get_clock()->now();
+
+    // Marker display duration
+    const rclcpp::Duration marker_duration = rclcpp::Duration(0, int64_t(1.0/loop_rate_hz_*1e9));
+
     // Display Target
     if(b_is_target_initialized_){
-        DisplayTarget(sim_time_, target);
+        DisplayTarget(current_time, target, marker_duration);
     }
 
     // Display State
     if(b_is_sim_initialized_){
-        DisplayState(sim_time_, state);
+        DisplayState(current_time, state, marker_duration);
     }
 }
 
 void Display::DisplayState(const rclcpp::Time& time,
-                           const interfaces::msg::State& state) {
+                           const interfaces::msg::State& state,
+                           const rclcpp::Duration& duration) {
+
+    // Broadcast TF for the ego frame
+    geometry_msgs::msg::TransformStamped tf_state;
+    tf_state.header.stamp = time;
+    tf_state.header.frame_id = state.header.frame_id;   // e.g., "world"
+    tf_state.child_frame_id  = state.id + "_frame";     // e.g., "ego_frame"
+
+    tf_state.transform.translation.x = state.pose.position.x;
+    tf_state.transform.translation.y = state.pose.position.y;
+    tf_state.transform.translation.z = state.pose.position.z;
+
+    tf_state.transform.rotation.x = state.pose.orientation.x;
+    tf_state.transform.rotation.y = state.pose.orientation.y;
+    tf_state.transform.rotation.z = state.pose.orientation.z;
+    tf_state.transform.rotation.w = state.pose.orientation.w;
+
+    tf_broadcaster_->sendTransform(tf_state);
+
+    // Rendering of spacecraft current state
     visualization_msgs::msg::Marker ego_marker;
     visualization_msgs::msg::Marker speed_marker;
 
@@ -157,7 +183,7 @@ void Display::DisplayState(const rclcpp::Time& time,
     speed_marker.ns = state.id + "_speed";
     speed_marker.id = 0;
     speed_marker.action = visualization_msgs::msg::Marker::ADD;
-    speed_marker.lifetime = rclcpp::Duration(0, int64_t(0.125*1e9)); // 0.125 sec
+    speed_marker.lifetime = duration;
     speed_marker.type = visualization_msgs::msg::Marker::ARROW;
 
     // Arrow origin at ego position
@@ -217,34 +243,36 @@ void Display::DisplayState(const rclcpp::Time& time,
     speed_marker.color.b = 1.0;
 
     pub_speed_marker_->publish(speed_marker);
-
-    // Broadcast TF for the ego frame
-    geometry_msgs::msg::TransformStamped tf_state;
-    tf_state.header.stamp = time;
-    tf_state.header.frame_id = state.header.frame_id;   // e.g., "world"
-    tf_state.child_frame_id  = state.id + "_frame";     // e.g., "ego_frame"
-
-    tf_state.transform.translation.x = state.pose.position.x;
-    tf_state.transform.translation.y = state.pose.position.y;
-    tf_state.transform.translation.z = state.pose.position.z;
-
-    tf_state.transform.rotation.x = state.pose.orientation.x;
-    tf_state.transform.rotation.y = state.pose.orientation.y;
-    tf_state.transform.rotation.z = state.pose.orientation.z;
-    tf_state.transform.rotation.w = state.pose.orientation.w;
-
-    tf_broadcaster_->sendTransform(tf_state);
 }
 
 void Display::DisplayTarget(const rclcpp::Time& time,
-                            const interfaces::msg::Target& target) {
+                            const interfaces::msg::Target& target,
+                            const rclcpp::Duration& duration) {
     visualization_msgs::msg::Marker target_marker;
 
+    // Broadcast TF for the target frame
+    geometry_msgs::msg::TransformStamped tf_target;
+    tf_target.header.stamp = time;
+    tf_target.header.frame_id = target.header.frame_id;   // e.g., "world"
+    tf_target.child_frame_id  = target.id + "_target_frame";
+
+    tf_target.transform.translation.x = target.pose.position.x;
+    tf_target.transform.translation.y = target.pose.position.y;
+    tf_target.transform.translation.z = target.pose.position.z;
+
+    tf_target.transform.rotation.x = target.pose.orientation.x;
+    tf_target.transform.rotation.y = target.pose.orientation.y;
+    tf_target.transform.rotation.z = target.pose.orientation.z;
+    tf_target.transform.rotation.w = target.pose.orientation.w;
+
+    tf_broadcaster_->sendTransform(tf_target);
+
+    //Rendering of target state
     target_marker.ns = target.id + "_target";
     target_marker.header.stamp = time;
     target_marker.header.frame_id = target.header.frame_id;
     target_marker.id = 0;
-    target_marker.lifetime = rclcpp::Duration(0, int64_t(1.0*1e9)); // 1.0 sec
+    target_marker.lifetime = duration;
     target_marker.action = visualization_msgs::msg::Marker::ADD;
 
     // Use mesh instead of sphere
@@ -289,23 +317,6 @@ void Display::DisplayTarget(const rclcpp::Time& time,
     target_marker.color.b = 1.0;
 
     pub_target_marker_->publish(target_marker);
-
-    // Broadcast TF for the target frame
-    geometry_msgs::msg::TransformStamped tf_target;
-    tf_target.header.stamp = time;
-    tf_target.header.frame_id = target.header.frame_id;   // e.g., "world"
-    tf_target.child_frame_id  = target.id + "_target_frame";
-
-    tf_target.transform.translation.x = target.pose.position.x;
-    tf_target.transform.translation.y = target.pose.position.y;
-    tf_target.transform.translation.z = target.pose.position.z;
-
-    tf_target.transform.rotation.x = q_target.x();
-    tf_target.transform.rotation.y = q_target.y();
-    tf_target.transform.rotation.z = q_target.z();
-    tf_target.transform.rotation.w = q_target.w();
-
-    tf_broadcaster_->sendTransform(tf_target);
 }
 
 int main(int argc, char ** argv)

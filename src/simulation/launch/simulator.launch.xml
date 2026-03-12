@@ -1,4 +1,5 @@
 <launch>
+  <!-- Simulator Package Launch File -->
   <node
     pkg="simulation"
     exec="simulator_node"
@@ -42,6 +43,8 @@
     <param name="inertia_xy" value="0.0"/>
     <param name="inertia_xz" value="0.0"/>
     <param name="inertia_yz" value="0.0"/>
+
+    <param name="center_of_mass" value="[0.0, 0.0, 0.0]" />
 
     <!-- Hardware parameters-->
     <param name="max_thrust" value="1.0"/>

@@ -25,6 +25,7 @@ c) build the packages
    $ colcon build --symlink-install --packages-select interfaces
    $ colcon build --symlink-install --packages-select simulation
    $ colcon build --symlink-install --packages-select fsw
+   $ colcon build --symlink-install --packages-select evaluation
 
 5. Execution
    (!!! execute the terminal within SIX_DOF_SIMULATION folder !!!)
@@ -40,3 +41,5 @@ a) Guidance & Control parameters
    open and modify : /src/SIX_DOF_SIMULATION/src/fsw/launch/fsw.launch.xml
 b) Simulation & Visualization parameters
    open and modify : /src/SIX_DOF_SIMULATION/src/simulator/launch/simulator.launch.xml
+c) Evaluation parameters
+   open and modify : /src/SIX/DOF_SIMULATION/src/evaluation/launch/evaluation.launch.xml

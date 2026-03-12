@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(interfaces)
+project(evaluation)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -7,32 +7,45 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
-
+find_package(Eigen3 REQUIRED)
+find_package(interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
 
-set(MSG_DEPS 
-    std_msgs
-    geometry_msgs
+# include directories
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# evaluation node
+add_executable(evaluation_node src/evaluation_node.cpp)
+ament_target_dependencies(
+   evaluation_node
+   rclcpp
+   interfaces
+   std_msgs
+   geometry_msgs
+)
+target_link_libraries(evaluation_node Eigen3::Eigen)
+
+target_include_directories(evaluation_node PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
 )
 
-set(MSG_FILES
-    "msg/Guidance.msg"
-    "msg/Command.msg"
-    "msg/State.msg"
-    "msg/Target.msg"
-    "msg/Navigation.msg"
-    "msg/Actuator.msg"
-    "msg/Evaluation.msg"
+# install targets
+install(TARGETS
+  evaluation_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
-rosidl_generate_interfaces(${PROJECT_NAME}
-  ${MSG_FILES}
-  DEPENDENCIES ${MSG_DEPS}
+install(DIRECTORY include/
+  DESTINATION include/
 )
 
-ament_export_dependencies(rosidl_default_runtime)
+install(
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
