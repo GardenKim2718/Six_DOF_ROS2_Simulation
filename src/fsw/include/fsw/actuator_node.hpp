@@ -15,6 +15,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <cmath>
 #include <Eigen/Dense>
+#include <eiquadprog/eiquadprog-fast.hpp>
 #include <vector>
 #include <string>
 #include <mutex>
@@ -59,6 +60,11 @@ public:
     }
 
     // Custom Functions
+    bool SolveThrusterAllocationQP(
+        const Eigen::Matrix<double, 6, 1>& wrench_cmd,
+        Eigen::Matrix<double, 12, 1>& thruster_cmd);
+    
+    eiquadprog::solvers::EiquadprogFast thruster_qp_solver_;
     
     // topics
     rclcpp::Publisher<interfaces::msg::Actuator>::SharedPtr pub_actuator_;
@@ -97,6 +103,7 @@ public:
     // thruster configuration (12 thrusters)
     Eigen::Matrix<double, 3, 12> thruster_positions_;
     Eigen::Matrix<double, 3, 12> thruster_directions_;
+    Eigen::Matrix<double, 6, 12> B_thruster_;
     double max_thrust_{1.0};  // maximum thrust per thruster [N]
 
     // RWA configuration (4 RWAs)
@@ -104,6 +111,9 @@ public:
     Eigen::Matrix<double, 4, 3> rwa_mounting_matrix_pseudo_inverse_;
     double max_rwa_momentum_{0.1};  // maximum momentum storage of each RWA [N*m*s]
     double max_rwa_torque_{0.01};  // maximum torque of each RWA [N*m]
+
+    // control allocation variables
+    double lambda_qp_ = 1e-6;  // regularization parameter for quadratic programming
 };
 
 #endif  // __actuator_node_hpp__
