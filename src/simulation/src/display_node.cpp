@@ -46,7 +46,7 @@ Display::Display(double &loop_rate_hz_)
         "target_marker", qos_profile);
 
     // Initialize offset quaternion for model orientation adjustment
-    q_offset.setRPY(M_PI/2.0, 0.0, 0.0);    // rotate mesh to align with x-forward
+    q_offset.setRPY(M_PI/2.0, 0.0, M_PI/2.0);    // rotate mesh to align with x-forward
     q_offset.normalize();
 
     // Steady clock initialization
