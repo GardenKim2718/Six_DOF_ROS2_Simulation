@@ -12,7 +12,5 @@ sleep 0.05
 terminator -e "bash -c 'source ~/.bashrc; source install/setup.bash; ros2 launch fsw fsw.launch.xml; echo \"Press Enter to close the terminal...\"; read'" &
 sleep 0.05
 
-# # Monitor State in another window
-# terminator -e "bash -c 'source ~/.bashrc; source install/setup.bash; ros2 topic echo /state; echo \"Press Enter to close the terminal...\"; read'" &
-# terminator -e "bash -c 'source ~/.bashrc; source install/setup.bash; ros2 topic echo /guidance; echo \"Press Enter to close the terminal...\"; read'" &
-# terminator -e "bash -c 'source ~/.bashrc; source install/setup.bash; ros2 topic echo /command; echo \"Press Enter to close the terminal...\"; read'" &
+# Monitor State in another window
+# terminator -e "bash -c 'source ~/.bashrc; source install/setup.bash; ros2 topic echo /evaluation; echo \"Press Enter to close the terminal...\"; read'"
