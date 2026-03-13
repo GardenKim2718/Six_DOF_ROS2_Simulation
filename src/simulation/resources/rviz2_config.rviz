@@ -7,7 +7,6 @@ Panels:
         - /Global Options1
         - /Status1
         - /Axes1
-        - /Axes1/Status1
         - /Axes2
         - /Axes3
       Splitter Ratio: 0.5
@@ -23,7 +22,6 @@ Panels:
   - Class: rviz_common/Views
     Expanded:
       - /Current View1
-      - /FrameAligned1
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz_common/Time
@@ -149,15 +147,15 @@ Visualization Manager:
       Lock Camera: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: -1.5697963237762451
-      Point towards: +z axis
+      Pitch: 1.4197964668273926
+      Point towards: -z axis
       Position:
-        X: -0.008399796672165394
-        Y: 0
-        Z: -8.39999008178711
+        X: -1.2645320892333984
+        Y: -0.025269843637943268
+        Z: 9.504415512084961
       Target Frame: Ego_frame
       Value: FrameAligned (rviz_default_plugins)
-      Yaw: 0
+      Yaw: 0.019999761134386063
     Saved:
       - Class: rviz_default_plugins/FrameAligned
         Enable Stereo Rendering:
@@ -169,15 +167,15 @@ Visualization Manager:
         Lock Camera: false
         Name: FrameAligned
         Near Clip Distance: 0.009999999776482582
-        Pitch: -1.5697963237762451
-        Point towards: +z axis
+        Pitch: 1.4197964668273926
+        Point towards: -z axis
         Position:
-          X: 0
-          Y: 0
-          Z: 0
+          X: -1.2645320892333984
+          Y: -0.025269843637943268
+          Z: 9.504415512084961
         Target Frame: Ego_frame
         Value: FrameAligned (rviz_default_plugins)
-        Yaw: 0
+        Yaw: 0.019999761134386063
 Window Geometry:
   Displays:
     collapsed: false
@@ -194,5 +192,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1908
-  X: 1920
-  Y: 0
+  X: 1888
+  Y: -32
