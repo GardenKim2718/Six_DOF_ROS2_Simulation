@@ -26,6 +26,8 @@ Actuator::Actuator()
     this->declare_parameter("max_rwa_momentum", max_rwa_momentum_);
     this->declare_parameter("max_rwa_torque", max_rwa_torque_);
 
+    this->declare_parameter("lambda_qp", lambda_qp_);
+
     // Get parameters
     GetParameters();
 
@@ -38,6 +40,9 @@ Actuator::Actuator()
     RCLCPP_INFO(this->get_logger(),
         "RWA Parameters: max_momentum=%.3f, max_torque=%.3f",
         max_rwa_momentum_, max_rwa_torque_);
+
+    RCLCPP_INFO(this->get_logger(),
+        "Control Allocation Parameter: lambda_qp=%.3e", lambda_qp_);
 
     // Subscribers Initialization
     sub_command_ = this->create_subscription<interfaces::msg::Command>(
@@ -82,6 +87,7 @@ void Actuator::GetParameters()
     this->get_parameter("max_thrust", max_thrust_);
     this->get_parameter("max_rwa_momentum", max_rwa_momentum_);
     this->get_parameter("max_rwa_torque", max_rwa_torque_);
+    this->get_parameter("lambda_qp", lambda_qp_);
 }
 
 void Actuator::Init()
@@ -132,6 +138,9 @@ void Actuator::Init()
             thruster_directions_.col(i) /= n;
         }
     }
+
+    // QP solver initialization
+    thruster_qp_solver_.reset(12, 0, 24);
 }
 
 void Actuator::Run()
@@ -142,16 +151,10 @@ void Actuator::Run()
         return;
     }
 
+    // handle initialization
     if (!b_actuator_initialized_) {
         Init();
         b_actuator_initialized_ = true;
-    }
-
-    // handle initialization
-    if (!b_control_initialized_) {
-        RCLCPP_WARN(this->get_logger(),
-            "Waiting for control initialization...");
-        return;
     }
 
     // get subscribed command
@@ -205,22 +208,15 @@ void Actuator::Run()
     //-----------------end of RWA Control Allocation------------------------//
 
     //---------------------Thruster Control Allocation----------------------//
-    // Thruster command generation
     // construct thruster B matrix
-    Eigen::Matrix<double, 6, 12> B_thruster;
-    Eigen::Matrix<double, 3, 12> B_thruster_torque;
     for (int i = 0; i < 12; ++i) {
-        B_thruster_torque.col(i) = 
-        (thruster_positions_.col(i) - center_of_mass_).cross(thruster_directions_.col(i));
+        Eigen::Vector3d r_i = thruster_positions_.col(i) - center_of_mass_;
+        Eigen::Vector3d d_i = thruster_directions_.col(i);
+        B_thruster_.block<3,1>(0,i) = d_i;
+        B_thruster_.block<3,1>(3,i) = r_i.cross(d_i);
     }
-    B_thruster.topRows<3>() = thruster_directions_;
-    B_thruster.bottomRows<3>() = B_thruster_torque;
 
-    // compute required thruster force
-    Eigen::Matrix<double, 12, 6> B_thruster_pseudo_inverse =
-        B_thruster.transpose() * 
-        (B_thruster * B_thruster.transpose()).inverse();
-
+    // control allocation using QP solver
     Eigen::Vector3d force_cmd(
         current_command.force.x,
         current_command.force.y,
@@ -228,18 +224,17 @@ void Actuator::Run()
     );
 
     Eigen::Vector3d thruster_torque_cmd = torque_cmd - rwa_torque_real;
-    Eigen::VectorXd force_torque_cmd(6);
-    force_torque_cmd << force_cmd, thruster_torque_cmd;
 
-    Eigen::VectorXd thruster_cmd(12);
-    thruster_cmd = B_thruster_pseudo_inverse * force_torque_cmd;
+    Eigen::Matrix<double, 6, 1> wrench_cmd;
+    wrench_cmd << force_cmd, thruster_torque_cmd;
 
-    for (int i = 0; i < 12; ++i) {
-        if (thruster_cmd(i) < 0.0) {
-            thruster_cmd(i) = 0.0;
-        } else if (thruster_cmd(i) > max_thrust_) {
-            thruster_cmd(i) = max_thrust_;
-        }
+    Eigen::Matrix<double, 12,1> thruster_cmd;
+    bool qp_success = SolveThrusterAllocationQP(wrench_cmd, thruster_cmd);
+
+    if (!qp_success) {
+        RCLCPP_ERROR(this->get_logger(),
+            "Thruster allocation QP failed. Commanding zero thrust.");
+        thruster_cmd.setZero();
     }
     //-----------------end of Thruster Control Allocation----------------------//
 
@@ -255,6 +250,70 @@ void Actuator::Run()
     }
 
     pub_actuator_->publish(o_actuator_);
+}
+
+bool Actuator::SolveThrusterAllocationQP(
+    const Eigen::Matrix<double, 6, 1>& wrench_cmd,
+    Eigen::Matrix<double, 12, 1>& thruster_cmd)
+{
+    constexpr int n_var = 12;
+    constexpr int n_ineq = 24;
+
+    using Matrix12d = Eigen::Matrix<double, 12, 12>;
+    using Vector12d = Eigen::Matrix<double, 12, 1>;
+    using MatrixCI  = Eigen::Matrix<double, 24, 12>;
+    using VectorCI  = Eigen::Matrix<double, 24, 1>;
+
+    Matrix12d H = B_thruster_.transpose() * B_thruster_
+                + lambda_qp_ * Matrix12d::Identity();
+
+    Vector12d g0 = -B_thruster_.transpose() * wrench_cmd;
+
+    Eigen::MatrixXd CE(0, n_var);
+    Eigen::VectorXd ce0(0);
+
+    MatrixCI CI;
+    VectorCI ci0;
+    CI.setZero();
+    ci0.setZero();
+
+    // lower bounds: u_i >= 0
+    for (int i = 0; i < n_var; ++i) {
+        CI(i, i) = 1.0;
+        ci0(i) = 0.0;
+    }
+
+    // upper bounds: -u_i + max_thrust_ >= 0
+    for (int i = 0; i < n_var; ++i) {
+        CI(n_var + i, i) = -1.0;
+        ci0(n_var + i) = max_thrust_;
+    }
+
+    Eigen::VectorXd x_qp(n_var);
+    x_qp.setZero();
+
+    auto status = thruster_qp_solver_.solve_quadprog(
+        H, g0, CE, ce0, CI, ci0, x_qp);
+
+    if (status != eiquadprog::solvers::EIQUADPROG_FAST_OPTIMAL) {
+        RCLCPP_ERROR(this->get_logger(),
+            "eiquadprog failed, status=%d", static_cast<int>(status));
+        thruster_cmd.setZero();
+        return false;
+    }
+
+    thruster_cmd = x_qp;
+
+    for (int i = 0; i < n_var; ++i) {
+        if (thruster_cmd(i) < 1e-10) {
+            thruster_cmd(i) = 0.0;
+        }
+        if (thruster_cmd(i) > max_thrust_) {
+            thruster_cmd(i) = max_thrust_;
+        }
+    }
+
+    return true;
 }
 
 int main(int argc, char ** argv)

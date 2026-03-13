@@ -247,8 +247,8 @@ void Guidance::Run()
         if (T_go_linear_ < T_go_linear_min_)
         {
             b_linear_guidance_active_ = false;
-            RCLCPP_WARN(this->get_logger(),
-                "Deactivating linear guidance, Time to Go : %.3f s", T_go_linear_);
+            // RCLCPP_WARN(this->get_logger(),
+            //     "Deactivating linear guidance, Time to Go : %.3f s", T_go_linear_);
         }
     }
 
@@ -319,8 +319,8 @@ void Guidance::LinearGuidance(
 {   
     // based the Apollo Powered Descent Guidance (APDG)
     // compute reference acceleration command with time-to-go
-    RCLCPP_INFO(this->get_logger(),
-        "Time to Go for Linear Guidance: %.3f s", T_go_linear_);
+    // RCLCPP_INFO(this->get_logger(),
+    //     "Time to Go for Linear Guidance: %.3f s", T_go_linear_);
     accel_cmd_ = 6.0 * (xf - x0 - v0 * T_go_linear_) / (T_go_linear_ * T_go_linear_) - 
                  2.0 * (vf - v0) / T_go_linear_;
 }

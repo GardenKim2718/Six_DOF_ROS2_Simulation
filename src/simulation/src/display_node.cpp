@@ -145,7 +145,7 @@ void Display::DisplayState(const rclcpp::Time& time,
     ego_marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
     std::string dir(getenv("PWD"));
     std::string mesh_path("/src/simulation/resources");
-    ego_marker.mesh_resource = "file://" + dir + mesh_path + "/Space_core.stl";
+    ego_marker.mesh_resource = "file://" + dir + mesh_path + "/X_37.stl";
     ego_marker.mesh_use_embedded_materials = true;
 
     ego_marker.pose.position.x = state.pose.position.x;
@@ -281,7 +281,7 @@ void Display::DisplayTarget(const rclcpp::Time& time,
     // Build mesh path (same logic as your ego marker)
     std::string dir(getenv("PWD"));
     std::string mesh_path("/src/simulation/resources");
-    target_marker.mesh_resource = "file://" + dir + mesh_path + "/Space_core.stl";
+    target_marker.mesh_resource = "file://" + dir + mesh_path + "/X_37.stl";
 
     // If you want to control color/alpha from the marker, disable embedded materials
     target_marker.mesh_use_embedded_materials = false;

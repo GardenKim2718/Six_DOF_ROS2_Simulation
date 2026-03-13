@@ -12,6 +12,7 @@ find_package(interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(eiquadprog REQUIRED)
 
 # include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -73,7 +74,10 @@ ament_target_dependencies(
    std_msgs
    geometry_msgs
 )
-target_link_libraries(actuator_node Eigen3::Eigen)
+target_link_libraries(actuator_node
+  Eigen3::Eigen
+  eiquadprog::eiquadprog
+)
 
 target_include_directories(actuator_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
