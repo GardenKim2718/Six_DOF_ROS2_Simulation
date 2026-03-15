@@ -18,13 +18,13 @@ a) unzip the given .tar.gz file within ROS2 workspace src folder
           >SIX_DOF_SIMULATION
 
 5. eiquadprog install (QP solver)
-a) $ cd src
+a) $ cd src/six_dof_simulation/src
 b) $ git clone --recursive https://github.com/stack-of-tasks/eiquadprog.git
 c) $ cd ..
 
 6. Build
-a) move into the project directory (we won't be working in the default ROS2 workspace!)
-   $ cd src/SIX_DOF_SIMULATION
+a) move into the project directory (if you are not already in it)
+   $ cd src/six_dof_simulation
 b) remove existing build, install, log directories
    $ rm -rf build install log
 c) build the packages
