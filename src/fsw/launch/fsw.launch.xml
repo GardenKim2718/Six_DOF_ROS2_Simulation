@@ -103,5 +103,14 @@
     <!-- node parameters -->
     <param name="loop_rate_hz" value="8.0"/>
 
+    <!-- Thruster Parameters -->
+    <param name="max_thrust" value="1.0"/>
+
+    <!-- RWA Parameters -->
+    <param name="max_rwa_momentum" value="4.0"/>
+    <param name="max_rwa_torque" value="0.055"/>
+
+    <!-- Control Allocation Parameters -->
+    <param name="lambda_qp" value="0.01"/>
   </node>
 </launch>

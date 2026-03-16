@@ -6,11 +6,11 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Axes1
-        - /Axes2
-        - /Axes3
+        - /Inertial_frame_Axes1
+        - /Ego_frame_Axes1
+        - /Target_frame_Axes1
         - /Grid1
-      Splitter Ratio: 0.5
+      Splitter Ratio: 0.6264705657958984
     Tree Height: 708
   - Class: rviz_common/Selection
     Name: Selection
@@ -23,10 +23,9 @@ Panels:
   - Class: rviz_common/Views
     Expanded:
       - /Current View1
-      - /Ego_Frame1
-      - /Ego_Frame1/Enable Stereo Rendering1
-      - /Target_frame1
       - /Inertial_frame1
+      - /Ego_frame1
+      - /Target_frame1
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz_common/Time
@@ -41,7 +40,7 @@ Visualization Manager:
       Enabled: true
       Name: Marker
       Namespaces:
-        {}
+        Ego: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -54,7 +53,7 @@ Visualization Manager:
       Enabled: true
       Name: Marker
       Namespaces:
-        {}
+        Ego_target: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -67,7 +66,7 @@ Visualization Manager:
       Enabled: true
       Name: Marker
       Namespaces:
-        {}
+        Ego_speed: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -79,29 +78,29 @@ Visualization Manager:
     - Class: rviz_default_plugins/Axes
       Enabled: true
       Length: 2
-      Name: Axes
+      Name: Inertial_frame_Axes
       Radius: 0.10000000149011612
       Reference Frame: map
       Value: true
     - Class: rviz_default_plugins/Axes
       Enabled: false
       Length: 1
-      Name: Axes
+      Name: Ego_frame_Axes
       Radius: 0.10000000149011612
       Reference Frame: Ego_frame
       Value: false
     - Class: rviz_default_plugins/Axes
-      Enabled: false
+      Enabled: true
       Length: 1
-      Name: Axes
+      Name: Target_frame_Axes
       Radius: 0.10000000149011612
       Reference Frame: Ego_target_frame
-      Value: false
+      Value: true
     - Alpha: 0.5
       Cell Size: 1
       Class: rviz_default_plugins/Grid
       Color: 160; 160; 164
-      Enabled: false
+      Enabled: true
       Line Style:
         Line Width: 0.029999999329447746
         Value: Lines
@@ -114,7 +113,7 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 100
       Reference Frame: <Fixed Frame>
-      Value: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -160,64 +159,27 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz_default_plugins/FrameAligned
+      Class: rviz_default_plugins/ThirdPersonFollower
+      Distance: 5.658919334411621
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: false
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
-      Lock Camera: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
-      Point towards: -z axis
-      Position:
-        X: -0.03239922598004341
-        Y: 0
-        Z: 32.399967193603516
-      Target Frame: map
-      Value: FrameAligned (rviz_default_plugins)
-      Yaw: 0
+      Pitch: 0.7853981852531433
+      Target Frame: Ego_frame
+      Value: ThirdPersonFollower (rviz_default_plugins)
+      Yaw: 3.141592025756836
     Saved:
-      - Class: rviz_default_plugins/FrameAligned
-        Enable Stereo Rendering:
-          Stereo Eye Separation: 0.05999999865889549
-          Stereo Focal Distance: 1
-          Swap Stereo Eyes: false
-          Value: false
-        Invert Z Axis: false
-        Lock Camera: false
-        Name: Ego_Frame
-        Near Clip Distance: 0.009999999776482582
-        Pitch: 1.5697963237762451
-        Point towards: -z axis
-        Position:
-          X: -0.0035999128594994545
-          Y: 0
-          Z: 3.5999979972839355
-        Target Frame: Ego_frame
-        Value: FrameAligned (rviz_default_plugins)
-        Yaw: 0
-      - Class: rviz_default_plugins/FrameAligned
-        Enable Stereo Rendering:
-          Stereo Eye Separation: 0.05999999865889549
-          Stereo Focal Distance: 1
-          Swap Stereo Eyes: false
-          Value: false
-        Invert Z Axis: false
-        Lock Camera: false
-        Name: Target_frame
-        Near Clip Distance: 0.009999999776482582
-        Pitch: 1.5697963237762451
-        Point towards: -z axis
-        Position:
-          X: -0.0035999128594994545
-          Y: 0
-          Z: 3.5999979972839355
-        Target Frame: Ego_target_frame
-        Value: FrameAligned (rviz_default_plugins)
-        Yaw: 0
       - Class: rviz_default_plugins/FrameAligned
         Enable Stereo Rendering:
           Stereo Eye Separation: 0.05999999865889549
@@ -237,6 +199,46 @@ Visualization Manager:
         Target Frame: map
         Value: FrameAligned (rviz_default_plugins)
         Yaw: 0
+      - Class: rviz_default_plugins/ThirdPersonFollower
+        Distance: 4.511255741119385
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: false
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 0
+        Focal Shape Fixed Size: false
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: Ego_frame
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.7853981852531433
+        Target Frame: Ego_frame
+        Value: ThirdPersonFollower (rviz_default_plugins)
+        Yaw: 3.141592025756836
+      - Class: rviz_default_plugins/ThirdPersonFollower
+        Distance: 4.511255741119385
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: false
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 2.040678959364453e-13
+        Focal Shape Fixed Size: false
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: Target_frame
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.7853981852531433
+        Target Frame: Ego_target_frame
+        Value: ThirdPersonFollower (rviz_default_plugins)
+        Yaw: 3.141592025756836
 Window Geometry:
   Displays:
     collapsed: false
@@ -253,5 +255,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1908
-  X: -26
-  Y: -5
+  X: -32
+  Y: -32
