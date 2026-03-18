@@ -16,6 +16,283 @@
 using interfaces::msg::State;
 using interfaces::msg::Actuator;
 
+Simulator::Simulator()
+    : Node("simulator_node")
+{
+    RCLCPP_INFO(this->get_logger(), "Initialize Simulator node...");
+
+    // QoS settings
+    auto qos_profile_pub = rclcpp::QoS(rclcpp::KeepLast(10));
+    auto qos_profile_sub = rclcpp::QoS(rclcpp::KeepLast(1));
+
+    // Declare Parameters
+    this->declare_parameter<double>("initial_time", 0.0);
+    this->declare_parameter<double>("loop_rate_hz", 100.0);
+    this->declare_parameter<std::string>("id", "ego");
+    this->declare_parameter<std::string>("frame_id", "world");
+
+    this->declare_parameter<double>("initial_x", 0.0);
+    this->declare_parameter<double>("initial_y", 0.0);
+    this->declare_parameter<double>("initial_z", 0.0);
+    this->declare_parameter<double>("initial_vx", 0.0);
+    this->declare_parameter<double>("initial_vy", 0.0);
+    this->declare_parameter<double>("initial_vz", 0.0);
+
+    this->declare_parameter<double>("initial_qx", 0.0);
+    this->declare_parameter<double>("initial_qy", 0.0);
+    this->declare_parameter<double>("initial_qz", 0.0);
+    this->declare_parameter<double>("initial_qw", 1.0);
+    this->declare_parameter<double>("initial_wx", 0.0);
+    this->declare_parameter<double>("initial_wy", 0.0);
+    this->declare_parameter<double>("initial_wz", 0.0);
+
+    this->declare_parameter<std::vector<double>>("initial_rwa_momentum",
+        std::vector<double>{0.0, 0.0, 0.0, 0.0});
+
+    this->declare_parameter<double>("mass", 1.0);
+    this->declare_parameter<double>("inertia_xx", 1.0);
+    this->declare_parameter<double>("inertia_yy", 1.0);
+    this->declare_parameter<double>("inertia_zz", 1.0);
+    this->declare_parameter<double>("inertia_xy", 0.0);
+    this->declare_parameter<double>("inertia_xz", 0.0);
+    this->declare_parameter<double>("inertia_yz", 0.0);
+    this->declare_parameter<std::vector<double>>("center_of_mass",
+        std::vector<double>{0.0, 0.0, 0.0});
+
+    this->declare_parameter<double>("max_thrust", 1.0);
+
+    this->declare_parameter<double>("max_rwa_momentum", 0.1);
+    this->declare_parameter<double>("max_rwa_torque", 0.01);
+
+    GetParameters();
+
+    RCLCPP_INFO(this->get_logger(),
+                "Simulator Parameters: initial_time=%.3f, loop_rate_hz=%.3f, id=%s, frame_id=%s",
+                initial_time_, loop_rate_hz_, initial_state_.id.c_str(), initial_state_.header.frame_id.c_str());
+
+    RCLCPP_INFO(this->get_logger(),
+                "Initial Linear State: x=%.3f, y=%.3f, z=%.3f, vx=%.3f, vy=%.3f, vz=%.3f",
+                initial_state_.pose.position.x, initial_state_.pose.position.y, initial_state_.pose.position.z,
+                initial_state_.vel.linear.x, initial_state_.vel.linear.y, initial_state_.vel.linear.z);
+
+    RCLCPP_INFO(this->get_logger(),
+                "Initial Angular State: qx=%.3f, qy=%.3f, qz=%.3f, qw=%.3f, wx=%.3f, wy=%.3f, wz=%.3f",
+                initial_state_.pose.orientation.x, initial_state_.pose.orientation.y,
+                initial_state_.pose.orientation.z, initial_state_.pose.orientation.w,
+                initial_state_.vel.angular.x, initial_state_.vel.angular.y, initial_state_.vel.angular.z);
+
+    RCLCPP_INFO(this->get_logger(),
+                "Initial RWA Momentum: rwa_momentum[0]=%.3f, rwa_momentum[1]=%.3f, rwa_momentum[2]=%.3f, rwa_momentum[3]=%.3f",
+                initial_state_.rwa_momentum[0], initial_state_.rwa_momentum[1],
+                initial_state_.rwa_momentum[2], initial_state_.rwa_momentum[3]);
+
+    RCLCPP_INFO(this->get_logger(),
+                "Mass & Inertia: mass=%.3f, Ixx=%.3f, Iyy=%.3f, Izz=%.3f, Ixy=%.3f, Ixz=%.3f, Iyz=%.3f",
+                mass_, inertia_(0, 0), inertia_(1, 1), inertia_(2, 2),
+                inertia_(0, 1), inertia_(0, 2), inertia_(1, 2));
+
+    RCLCPP_INFO(this->get_logger(),
+        "Center of Mass: x=%.3f, y=%.3f, z=%.3f",
+        center_of_mass_(0), center_of_mass_(1), center_of_mass_(2));
+
+    RCLCPP_INFO(this->get_logger(),
+                "Thruster Limit: max_thrust=%.3f", max_thrust_);
+
+    RCLCPP_INFO(this->get_logger(),
+                "RWA Parameters: max_momentum=%.3f, max_torque=%.3f",
+                max_rwa_momentum_, max_rwa_torque_);
+
+    // Initialize last command (for safety)
+    last_cmd_.id = initial_state_.id;
+    last_cmd_.thruster_cmd = std::array<double, 12>{};
+    last_cmd_.rwa_torque_cmd = std::array<double, 4>{};
+
+    // Subscribers Initialization
+    sub_actuator_ = this->create_subscription<Actuator>(
+        "actuator", qos_profile_sub,
+        std::bind(&Simulator::CallbackActuator, this, std::placeholders::_1));
+
+    // Publishers Initialization
+    pub_state_ = this->create_publisher<State>(
+        "state", qos_profile_pub);
+
+    // Steady clock initialization
+    steady_clock_ = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
+
+    const auto period_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::duration<double>(1.0 / loop_rate_hz_));
+
+    t_run_node_ = rclcpp::create_timer(
+        this->get_node_base_interface(),
+        this->get_node_timers_interface(),
+        steady_clock_,
+        period_ns,
+        std::bind(&Simulator::Run, this));
+
+    // Simulator Initialization
+    o_state_ = initial_state_;
+    sim_time_prev_ = rclcpp::Time(initial_time_);
+}
+
+Simulator::~Simulator()
+{
+    RCLCPP_INFO(this->get_logger(), "Shutting down Simulator node...");
+}
+
+void Simulator::GetParameters()
+{
+    // This function can be used to fetch parameters when needed
+    this->get_parameter("initial_time", initial_time_);
+    this->get_parameter("loop_rate_hz", loop_rate_hz_);
+    this->get_parameter("id", initial_state_.id);
+    this->get_parameter("frame_id", initial_state_.header.frame_id);
+
+    this->get_parameter("initial_x", initial_state_.pose.position.x);
+    this->get_parameter("initial_y", initial_state_.pose.position.y);
+    this->get_parameter("initial_z", initial_state_.pose.position.z);
+    this->get_parameter("initial_vx", initial_state_.vel.linear.x);
+    this->get_parameter("initial_vy", initial_state_.vel.linear.y);
+    this->get_parameter("initial_vz", initial_state_.vel.linear.z);
+
+    this->get_parameter("initial_qx", initial_state_.pose.orientation.x);
+    this->get_parameter("initial_qy", initial_state_.pose.orientation.y);
+    this->get_parameter("initial_qz", initial_state_.pose.orientation.z);
+    this->get_parameter("initial_qw", initial_state_.pose.orientation.w);
+    this->get_parameter("initial_wx", initial_state_.vel.angular.x);
+    this->get_parameter("initial_wy", initial_state_.vel.angular.y);
+    this->get_parameter("initial_wz", initial_state_.vel.angular.z);
+
+    std::vector<double> initial_rwa_momentum;
+    this->get_parameter("initial_rwa_momentum", initial_rwa_momentum);
+    if (initial_rwa_momentum.size() == 4) {
+        std::copy_n(initial_rwa_momentum.begin(), 4, initial_state_.rwa_momentum.begin());
+    } else {
+        RCLCPP_WARN(this->get_logger(),
+                    "initial_rwa_momentum size is %zu, expected 4. Using zeros.", initial_rwa_momentum.size());
+        initial_state_.rwa_momentum = {0.0, 0.0, 0.0, 0.0};
+    }
+
+    this->get_parameter("mass", mass_);
+
+    double Ixx, Iyy, Izz, Ixy, Ixz, Iyz;
+    this->get_parameter("inertia_xx", Ixx);
+    this->get_parameter("inertia_yy", Iyy);
+    this->get_parameter("inertia_zz", Izz);
+    this->get_parameter("inertia_xy", Ixy);
+    this->get_parameter("inertia_xz", Ixz);
+    this->get_parameter("inertia_yz", Iyz);
+
+    std::vector<double> center_of_mass(3);
+    this->get_parameter("center_of_mass", center_of_mass);
+    center_of_mass_ = Eigen::Vector3d(center_of_mass[0], center_of_mass[1], center_of_mass[2]);
+
+    // fill in the MOI matrix
+    inertia_ << Ixx, Ixy, Ixz,
+                Ixy, Iyy, Iyz,
+                Ixz, Iyz, Izz;
+
+    // compute inverse MOI matrix
+    inertia_inv_ = inertia_.inverse();
+
+    this->get_parameter("max_thrust", max_thrust_);
+
+    this->get_parameter("max_rwa_momentum", max_rwa_momentum_);
+    this->get_parameter("max_rwa_torque", max_rwa_torque_);
+}
+
+void Simulator::Init()
+{
+    // Log
+    RCLCPP_INFO(this->get_logger(),
+        "Starting Simulator Node Loop with loop_rate_hz=%.3f", loop_rate_hz_);
+
+    // Time Initialization
+    o_state_ = initial_state_;
+    sim_time_prev_ = rclcpp::Time(initial_time_);
+
+    rclcpp::Time current_time = steady_clock_->now();
+    real_time_prev_ = current_time;
+
+    // Thruster configuration
+    thruster_positions_ <<
+        -0.15, -0.15,  -0.15,  0.15, -0.15,  0.15,  0.15, -0.15, -0.15,  0.15,  0.15, -0.15,
+        0.15, -0.15,  0.15, -0.15, -0.15, -0.15,  0.15,  0.15,  0.15, -0.15,  0.15, -0.15,
+        0.15, -0.15, -0.15,  0.15,  0.15, -0.15,  0.15, -0.15,  0.15,  0.15, -0.15, -0.15;
+
+    thruster_directions_ <<
+        1,  1, -1, -1,  0,  0,  0,  0,  0,  0,  0,  0,
+        0,  0,  0,  0,  1,  1, -1, -1,  0,  0,  0,  0,
+        0,  0,  0,  0,  0,  0,  0,  0, -1, -1,  1,  1;
+
+    // thruster direction normalization
+    for (int i = 0; i < thruster_directions_.cols(); ++i)
+    {
+        const double n = thruster_directions_.col(i).norm();
+        if (n > 1e-12)
+        {
+            thruster_directions_.col(i) /= n;
+        }
+    }
+
+    // RWA configuration
+    rwa_mounting_matrix_ <<
+        -1, -1,  1,  1,
+        -1,  1,  1, -1,
+         1,  1,  1,  1;
+    
+    for (int i = 0; i < rwa_mounting_matrix_.cols(); ++i)
+    {
+        const double n = rwa_mounting_matrix_.col(i).norm();
+        if (n > 1e-12)
+        {
+            rwa_mounting_matrix_.col(i) /= n;
+        }
+    }
+}
+
+void Simulator::Run()
+{
+    if(!sim_initialized_) // first run initializaiton
+    {
+        Init();
+        sim_initialized_ = true;
+        o_state_ = initial_state_;
+    } else
+    {
+        // time
+        rclcpp::Time current_time = steady_clock_->now();
+
+        // time interval
+        double time_dt = (current_time - real_time_prev_).seconds();
+        if (time_dt <= 0.0)
+        {
+            RCLCPP_WARN(this->get_logger(),
+                        "Non-positive time step detected: dt=%.6f. Skipping propagation.", time_dt);
+            return;
+        }
+        else
+        {
+            sim_time_curr_ = sim_time_prev_ + rclcpp::Duration::from_seconds(time_dt);
+        }
+        real_time_prev_ = current_time;
+
+        // propagate state
+        Actuator cmd;
+        {
+            std::lock_guard<std::mutex> lock(mutex_actuator_);
+            cmd = last_cmd_;
+        }
+        o_state_ = PropagateStateRK4(o_state_, cmd, time_dt);
+    }
+
+    // publish state
+    pub_state_->publish(o_state_);
+
+    // update sim time
+    sim_time_prev_ = sim_time_curr_;
+}
+
 StateDerivative Simulator::ComputeStateDerivative(
     const State &state,
     const Actuator &cmd)
@@ -224,282 +501,6 @@ State Simulator::PropagateStateRK4(
     next.header.stamp = sim_time_new;
 
     return next;
-}
-
-Simulator::Simulator()
-    : Node("simulator_node")
-{
-    RCLCPP_INFO(this->get_logger(), "Initialize Simulator node...");
-
-    // QoS settings
-    auto qos_profile = rclcpp::QoS(rclcpp::KeepLast(10));
-
-    // Declare Parameters
-    this->declare_parameter<double>("initial_time", 0.0);
-    this->declare_parameter<double>("loop_rate_hz", 100.0);
-    this->declare_parameter<std::string>("id", "ego");
-    this->declare_parameter<std::string>("frame_id", "world");
-
-    this->declare_parameter<double>("initial_x", 0.0);
-    this->declare_parameter<double>("initial_y", 0.0);
-    this->declare_parameter<double>("initial_z", 0.0);
-    this->declare_parameter<double>("initial_vx", 0.0);
-    this->declare_parameter<double>("initial_vy", 0.0);
-    this->declare_parameter<double>("initial_vz", 0.0);
-
-    this->declare_parameter<double>("initial_qx", 0.0);
-    this->declare_parameter<double>("initial_qy", 0.0);
-    this->declare_parameter<double>("initial_qz", 0.0);
-    this->declare_parameter<double>("initial_qw", 1.0);
-    this->declare_parameter<double>("initial_wx", 0.0);
-    this->declare_parameter<double>("initial_wy", 0.0);
-    this->declare_parameter<double>("initial_wz", 0.0);
-
-    this->declare_parameter<std::vector<double>>("initial_rwa_momentum",
-        std::vector<double>{0.0, 0.0, 0.0, 0.0});
-
-    this->declare_parameter<double>("mass", 1.0);
-    this->declare_parameter<double>("inertia_xx", 1.0);
-    this->declare_parameter<double>("inertia_yy", 1.0);
-    this->declare_parameter<double>("inertia_zz", 1.0);
-    this->declare_parameter<double>("inertia_xy", 0.0);
-    this->declare_parameter<double>("inertia_xz", 0.0);
-    this->declare_parameter<double>("inertia_yz", 0.0);
-    this->declare_parameter<std::vector<double>>("center_of_mass",
-        std::vector<double>{0.0, 0.0, 0.0});
-
-    this->declare_parameter<double>("max_thrust", 1.0);
-
-    this->declare_parameter<double>("max_rwa_momentum", 0.1);
-    this->declare_parameter<double>("max_rwa_torque", 0.01);
-
-    GetParameters();
-
-    RCLCPP_INFO(this->get_logger(),
-                "Simulator Parameters: initial_time=%.3f, loop_rate_hz=%.3f, id=%s, frame_id=%s",
-                initial_time_, loop_rate_hz_, initial_state_.id.c_str(), initial_state_.header.frame_id.c_str());
-
-    RCLCPP_INFO(this->get_logger(),
-                "Initial Linear State: x=%.3f, y=%.3f, z=%.3f, vx=%.3f, vy=%.3f, vz=%.3f",
-                initial_state_.pose.position.x, initial_state_.pose.position.y, initial_state_.pose.position.z,
-                initial_state_.vel.linear.x, initial_state_.vel.linear.y, initial_state_.vel.linear.z);
-
-    RCLCPP_INFO(this->get_logger(),
-                "Initial Angular State: qx=%.3f, qy=%.3f, qz=%.3f, qw=%.3f, wx=%.3f, wy=%.3f, wz=%.3f",
-                initial_state_.pose.orientation.x, initial_state_.pose.orientation.y,
-                initial_state_.pose.orientation.z, initial_state_.pose.orientation.w,
-                initial_state_.vel.angular.x, initial_state_.vel.angular.y, initial_state_.vel.angular.z);
-
-    RCLCPP_INFO(this->get_logger(),
-                "Initial RWA Momentum: rwa_momentum[0]=%.3f, rwa_momentum[1]=%.3f, rwa_momentum[2]=%.3f, rwa_momentum[3]=%.3f",
-                initial_state_.rwa_momentum[0], initial_state_.rwa_momentum[1],
-                initial_state_.rwa_momentum[2], initial_state_.rwa_momentum[3]);
-
-    RCLCPP_INFO(this->get_logger(),
-                "Mass & Inertia: mass=%.3f, Ixx=%.3f, Iyy=%.3f, Izz=%.3f, Ixy=%.3f, Ixz=%.3f, Iyz=%.3f",
-                mass_, inertia_(0, 0), inertia_(1, 1), inertia_(2, 2),
-                inertia_(0, 1), inertia_(0, 2), inertia_(1, 2));
-
-    RCLCPP_INFO(this->get_logger(),
-        "Center of Mass: x=%.3f, y=%.3f, z=%.3f",
-        center_of_mass_(0), center_of_mass_(1), center_of_mass_(2));
-
-    RCLCPP_INFO(this->get_logger(),
-                "Thruster Limit: max_thrust=%.3f", max_thrust_);
-
-    RCLCPP_INFO(this->get_logger(),
-                "RWA Parameters: max_momentum=%.3f, max_torque=%.3f",
-                max_rwa_momentum_, max_rwa_torque_);
-
-    // Initialize last command (for safety)
-    last_cmd_.id = initial_state_.id;
-    last_cmd_.thruster_cmd = std::array<double, 12>{};
-    last_cmd_.rwa_torque_cmd = std::array<double, 4>{};
-
-    // Subscribers Initialization
-    sub_actuator_ = this->create_subscription<Actuator>(
-        "actuator", qos_profile,
-        std::bind(&Simulator::CallbackActuator, this, std::placeholders::_1));
-
-    // Publishers Initialization
-    pub_state_ = this->create_publisher<State>(
-        "state", qos_profile);
-
-    // Steady clock initialization
-    steady_clock_ = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
-
-    const auto period_ns =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::duration<double>(1.0 / loop_rate_hz_));
-
-    t_run_node_ = rclcpp::create_timer(
-        this->get_node_base_interface(),
-        this->get_node_timers_interface(),
-        steady_clock_,
-        period_ns,
-        std::bind(&Simulator::Run, this));
-
-    // Simulator Initialization
-    o_state_ = initial_state_;
-    sim_time_prev_ = rclcpp::Time(initial_time_);
-}
-
-Simulator::~Simulator()
-{
-    RCLCPP_INFO(this->get_logger(), "Shutting down Simulator node...");
-}
-
-void Simulator::GetParameters()
-{
-    // This function can be used to fetch parameters when needed
-    this->get_parameter("initial_time", initial_time_);
-    this->get_parameter("loop_rate_hz", loop_rate_hz_);
-    this->get_parameter("id", initial_state_.id);
-    this->get_parameter("frame_id", initial_state_.header.frame_id);
-
-    this->get_parameter("initial_x", initial_state_.pose.position.x);
-    this->get_parameter("initial_y", initial_state_.pose.position.y);
-    this->get_parameter("initial_z", initial_state_.pose.position.z);
-    this->get_parameter("initial_vx", initial_state_.vel.linear.x);
-    this->get_parameter("initial_vy", initial_state_.vel.linear.y);
-    this->get_parameter("initial_vz", initial_state_.vel.linear.z);
-
-    this->get_parameter("initial_qx", initial_state_.pose.orientation.x);
-    this->get_parameter("initial_qy", initial_state_.pose.orientation.y);
-    this->get_parameter("initial_qz", initial_state_.pose.orientation.z);
-    this->get_parameter("initial_qw", initial_state_.pose.orientation.w);
-    this->get_parameter("initial_wx", initial_state_.vel.angular.x);
-    this->get_parameter("initial_wy", initial_state_.vel.angular.y);
-    this->get_parameter("initial_wz", initial_state_.vel.angular.z);
-
-    std::vector<double> initial_rwa_momentum;
-    this->get_parameter("initial_rwa_momentum", initial_rwa_momentum);
-    if (initial_rwa_momentum.size() == 4) {
-        std::copy_n(initial_rwa_momentum.begin(), 4, initial_state_.rwa_momentum.begin());
-    } else {
-        RCLCPP_WARN(this->get_logger(),
-                    "initial_rwa_momentum size is %zu, expected 4. Using zeros.", initial_rwa_momentum.size());
-        initial_state_.rwa_momentum = {0.0, 0.0, 0.0, 0.0};
-    }
-
-    this->get_parameter("mass", mass_);
-
-    double Ixx, Iyy, Izz, Ixy, Ixz, Iyz;
-    this->get_parameter("inertia_xx", Ixx);
-    this->get_parameter("inertia_yy", Iyy);
-    this->get_parameter("inertia_zz", Izz);
-    this->get_parameter("inertia_xy", Ixy);
-    this->get_parameter("inertia_xz", Ixz);
-    this->get_parameter("inertia_yz", Iyz);
-
-    std::vector<double> center_of_mass(3);
-    this->get_parameter("center_of_mass", center_of_mass);
-    center_of_mass_ = Eigen::Vector3d(center_of_mass[0], center_of_mass[1], center_of_mass[2]);
-
-    // fill in the MOI matrix
-    inertia_ << Ixx, Ixy, Ixz,
-                Ixy, Iyy, Iyz,
-                Ixz, Iyz, Izz;
-
-    // compute inverse MOI matrix
-    inertia_inv_ = inertia_.inverse();
-
-    this->get_parameter("max_thrust", max_thrust_);
-
-    this->get_parameter("max_rwa_momentum", max_rwa_momentum_);
-    this->get_parameter("max_rwa_torque", max_rwa_torque_);
-}
-
-void Simulator::Init()
-{
-    // Log
-    RCLCPP_INFO(this->get_logger(),
-        "Starting Simulator Node Loop with loop_rate_hz=%.3f", loop_rate_hz_);
-
-    // Time Initialization
-    o_state_ = initial_state_;
-    sim_time_prev_ = rclcpp::Time(initial_time_);
-
-    rclcpp::Time current_time = steady_clock_->now();
-    real_time_prev_ = current_time;
-
-    // Thruster configuration
-    thruster_positions_ <<
-        -0.15, -0.15,  -0.15,  0.15, -0.15,  0.15,  0.15, -0.15, -0.15,  0.15,  0.15, -0.15,
-        0.15, -0.15,  0.15, -0.15, -0.15, -0.15,  0.15,  0.15,  0.15, -0.15,  0.15, -0.15,
-        0.15, -0.15, -0.15,  0.15,  0.15, -0.15,  0.15, -0.15,  0.15,  0.15, -0.15, -0.15;
-
-    thruster_directions_ <<
-        1,  1, -1, -1,  0,  0,  0,  0,  0,  0,  0,  0,
-        0,  0,  0,  0,  1,  1, -1, -1,  0,  0,  0,  0,
-        0,  0,  0,  0,  0,  0,  0,  0, -1, -1,  1,  1;
-
-    // thruster direction normalization
-    for (int i = 0; i < thruster_directions_.cols(); ++i)
-    {
-        const double n = thruster_directions_.col(i).norm();
-        if (n > 1e-12)
-        {
-            thruster_directions_.col(i) /= n;
-        }
-    }
-
-    // RWA configuration
-    rwa_mounting_matrix_ <<
-        -1, -1,  1,  1,
-        -1,  1,  1, -1,
-         1,  1,  1,  1;
-    
-    for (int i = 0; i < rwa_mounting_matrix_.cols(); ++i)
-    {
-        const double n = rwa_mounting_matrix_.col(i).norm();
-        if (n > 1e-12)
-        {
-            rwa_mounting_matrix_.col(i) /= n;
-        }
-    }
-}
-
-void Simulator::Run()
-{
-    if(!sim_initialized_) // first run initializaiton
-    {
-        Init();
-        sim_initialized_ = true;
-        o_state_ = initial_state_;
-    } else
-    {
-        // time
-        rclcpp::Time current_time = steady_clock_->now();
-
-        // time interval
-        double time_dt = (current_time - real_time_prev_).seconds();
-        if (time_dt <= 0.0)
-        {
-            RCLCPP_WARN(this->get_logger(),
-                        "Non-positive time step detected: dt=%.6f. Skipping propagation.", time_dt);
-            return;
-        }
-        else
-        {
-            sim_time_curr_ = sim_time_prev_ + rclcpp::Duration::from_seconds(time_dt);
-        }
-        real_time_prev_ = current_time;
-
-        // propagate state
-        Actuator cmd;
-        {
-            std::lock_guard<std::mutex> lock(mutex_actuator_);
-            cmd = last_cmd_;
-        }
-        o_state_ = PropagateStateRK4(o_state_, cmd, time_dt);
-    }
-
-    // publish state
-    pub_state_->publish(o_state_);
-
-    // update sim time
-    sim_time_prev_ = sim_time_curr_;
 }
 
 int main(int argc, char **argv)
