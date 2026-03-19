@@ -21,10 +21,6 @@ Simulator::Simulator()
 {
     RCLCPP_INFO(this->get_logger(), "Initialize Simulator node...");
 
-    // QoS settings
-    auto qos_profile_pub = rclcpp::QoS(rclcpp::KeepLast(10));
-    auto qos_profile_sub = rclcpp::QoS(rclcpp::KeepLast(1));
-
     // Declare Parameters
     this->declare_parameter<double>("initial_time", 0.0);
     this->declare_parameter<double>("loop_rate_hz", 100.0);
@@ -106,6 +102,16 @@ Simulator::Simulator()
     last_cmd_.id = initial_state_.id;
     last_cmd_.thruster_cmd = std::array<double, 12>{};
     last_cmd_.rwa_torque_cmd = std::array<double, 4>{};
+
+    // QoS settings
+    // Publisher QoS
+    auto qos_profile_pub = rclcpp::QoS(rclcpp::KeepLast(10),);
+    qos_profile_pub.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
+    qos_profile_pub.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+    qos_profile_pub.deadline(std::chrono::milliseconds((int64_t)(1000 / loop_rate_hz_)));
+    qos_profile_pub.life
+    // Subscriber QoS
+    auto qos_profile_sub = rclcpp::QoS(rclcpp::KeepLast(1));
 
     // Subscribers Initialization
     sub_actuator_ = this->create_subscription<Actuator>(
