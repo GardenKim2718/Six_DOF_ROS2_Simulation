@@ -367,7 +367,7 @@ void Display::DisplayStatus(const rclcpp::Time& time,
 
     status_text.action = rviz_2d_overlay_msgs::msg::OverlayText::ADD;
     status_text.width = 800;
-    status_text.height = 260;
+    status_text.height = 600;
     status_text.horizontal_alignment = rviz_2d_overlay_msgs::msg::OverlayText::LEFT;
     status_text.vertical_alignment = rviz_2d_overlay_msgs::msg::OverlayText::TOP;
     status_text.horizontal_distance = 10;
@@ -423,17 +423,26 @@ void Display::DisplayStatus(const rclcpp::Time& time,
         << state.pose.position.x << ", "
         << state.pose.position.y << ", "
         << state.pose.position.z << ")\n"
-        << "  Speed [m/s]       : " << velocity << "\n"
+        << "  Speed [m/s]       : ("
+        << state.vel.linear.x << ", "
+        << state.vel.linear.y << ", "
+        << state.vel.linear.z << ")\n"
+        << "  Velocity [m/s]     : " << velocity << "\n"
         << "  Quaternion [x y z w]: ("
         << state.pose.orientation.x << ", "
         << state.pose.orientation.y << ", "
         << state.pose.orientation.z << ", "
         << state.pose.orientation.w << ")\n"
-        << "  Angular vel [rad/s]: ("
+        << "  Angular Velocity [rad/s]: ("
         << state.vel.angular.x << ", "
         << state.vel.angular.y << ", "
         << state.vel.angular.z << ")\n"
-        << "  Angular Speed [rad/s]: " << ang_speed << "\n\n"
+        << "  Angular Speed [rad/s]: " << ang_speed << "\n"
+        << "  RWA Momentum [Nms]: ("
+        << state.rwa_momentum[0] << ", "
+        << state.rwa_momentum[1] << ", "
+        << state.rwa_momentum[2] << ", "
+        << state.rwa_momentum[3] << ")\n\n"
         << "Target\n"
         << "  Position [m]      : ("
         << target_x << ", "
@@ -448,7 +457,7 @@ void Display::DisplayStatus(const rclcpp::Time& time,
         << target_qy << ", "
         << target_qz << ", "
         << target_qw << ")\n"
-        << "  Angular vel [rad/s]: ("
+        << "  Angular Velocity [rad/s]: ("
         << target_wx << ", "
         << target_wy << ", "
         << target_wz << ")\n\n"
