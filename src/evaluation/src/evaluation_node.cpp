@@ -21,9 +21,6 @@ Evaluation::Evaluation()
 {
     RCLCPP_INFO(this->get_logger(), "Initialize Evaluation node...");
     
-    //QoS settings
-    auto qos_profile = rclcpp::QoS(rclcpp::KeepLast(10));
-    
     // Declare Parameters
     this->declare_parameter<double>("loop_rate_hz", loop_rate_hz_);
 
@@ -52,31 +49,61 @@ Evaluation::Evaluation()
         "Center of Mass: x=%.3f, y=%.3f, z=%.3f",
         center_of_mass_(0), center_of_mass_(1), center_of_mass_(2));
 
+    // QoS settings
+    // Event Callbacks for QoS
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.event_callbacks.deadline_callback =
+        [this](rclcpp::QOSDeadlineRequestedInfo & info)
+        {
+            RCLCPP_WARN(
+            this->get_logger(),
+            "Subscription deadline missed: total_count=%d, total_count_change=%d",
+            info.total_count,
+            info.total_count_change);
+        };
+
+    // Publisher QoS
+    auto qos_profile_pub = rclcpp::QoS(rclcpp::KeepLast(1));
+    qos_profile_pub.reliable();
+    qos_profile_pub.transient_local();
+    qos_profile_pub.deadline(rclcpp::Duration::from_seconds(1.0 / loop_rate_hz_));
+
+    // Subscriber QoS
+    auto qos_profile_sub = rclcpp::QoS(rclcpp::KeepLast(1));
+    qos_profile_sub.reliable();
+    qos_profile_sub.transient_local();
+    qos_profile_sub.deadline(rclcpp::Duration::from_seconds(1.0 / loop_rate_hz_ * 1.2));
+
     // Subscribers Initialization
     sub_state_ = this->create_subscription<interfaces::msg::State>(
-        "state", qos_profile,
-        std::bind(&Evaluation::CallbackState, this, std::placeholders::_1));
+        "state", qos_profile_sub,
+        std::bind(&Evaluation::CallbackState, this, std::placeholders::_1),
+        sub_options);
 
     sub_actuator_ = this->create_subscription<interfaces::msg::Actuator>(
-        "actuator", qos_profile,
-        std::bind(&Evaluation::CallbackActuator, this, std::placeholders::_1));
-    
+        "actuator", qos_profile_sub,
+        std::bind(&Evaluation::CallbackActuator, this, std::placeholders::_1),
+        sub_options);
+
     sub_guidance_ = this->create_subscription<interfaces::msg::Guidance>(
-        "guidance", qos_profile,
-        std::bind(&Evaluation::CallbackGuidance, this, std::placeholders::_1));
+        "guidance", qos_profile_sub,
+        std::bind(&Evaluation::CallbackGuidance, this, std::placeholders::_1),
+        sub_options);
 
     sub_command_ = this->create_subscription<interfaces::msg::Command>(
-        "command", qos_profile,
-        std::bind(&Evaluation::CallbackCommand, this, std::placeholders::_1));
-    
+        "command", qos_profile_sub,
+        std::bind(&Evaluation::CallbackCommand, this, std::placeholders::_1),
+        sub_options);
+
     sub_target_ = this->create_subscription<interfaces::msg::Target>(
-        "target", qos_profile,
-        std::bind(&Evaluation::CallbackTarget, this, std::placeholders::_1));
-    
+        "target", qos_profile_sub,
+        std::bind(&Evaluation::CallbackTarget, this, std::placeholders::_1),
+        sub_options);
+
     // Publishers Initialization
     pub_evaluation_ = this->create_publisher<interfaces::msg::Evaluation>(
-        "evaluation", qos_profile);
-    
+        "evaluation", qos_profile_pub);
+
     // Steady clock initialization
     steady_clock_ = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
 

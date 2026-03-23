@@ -133,7 +133,7 @@ void Display::Run()
         guidance = last_guidance_;
     }
 
-    // time (using system time due to synchronization issues with RViz2)
+    // steady-clock time
     rclcpp::Time current_time = this->get_clock()->now();
 
     // Marker display duration
@@ -141,17 +141,17 @@ void Display::Run()
 
     // Display Target
     if(b_is_target_initialized_){
-        DisplayTarget(current_time, target, marker_duration);
+        DisplayTarget(sim_time_, target, marker_duration);
     }
 
     // Display State
     if(b_is_sim_initialized_){
-        DisplayState(current_time, state, marker_duration);
+        DisplayState(sim_time_, state, marker_duration);
     }
 
     // Display Status
     if(b_is_sim_initialized_ && b_is_guidance_initialized_) {
-        DisplayStatus(current_time, state, target, guidance);
+        DisplayStatus(sim_time_, state, target, guidance);
     }
 }
 
