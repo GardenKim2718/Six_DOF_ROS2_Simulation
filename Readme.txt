@@ -48,8 +48,8 @@ Info) all the parameters are connected via launch.xml files
       no need to re-build the packages after changing the parameters within launch files
 Warning) make sure that dynamic & hardware parameters for fsw and simulation packages matches each other
 a) Guidance & Control parameters
-   open and modify : /src/SIX_DOF_SIMULATION/src/fsw/launch/fsw.launch.xml
+   open and modify : /src/SIX_DOF_SIMULATION/src/fsw/launch/fsw_launch.py
 b) Simulation & Visualization parameters
-   open and modify : /src/SIX_DOF_SIMULATION/src/simulator/launch/simulator.launch.xml
+   open and modify : /src/SIX_DOF_SIMULATION/src/simulator/launch/simulator_launch.py
 c) Evaluation parameters
-   open and modify : /src/SIX/DOF_SIMULATION/src/evaluation/launch/evaluation.launch.xml
+   open and modify : /src/SIX/DOF_SIMULATION/src/evaluation/launch/evaluation_launch.py
