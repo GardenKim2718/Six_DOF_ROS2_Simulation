@@ -17,9 +17,6 @@ Display::Display(double &loop_rate_hz_)
 {
     RCLCPP_INFO(this->get_logger(), "Initialize Display node...");
     
-    //QoS settings
-    auto qos_profile = rclcpp::QoS(rclcpp::KeepLast(1));
-    
     // TF2 broadcaster
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(*this);
 
@@ -29,22 +26,48 @@ Display::Display(double &loop_rate_hz_)
     // Read Parameters
     this->get_parameter("loop_rate_hz", loop_rate_hz_);
 
+    // QoS settings
+    // Event Callbacks for QoS
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.event_callbacks.deadline_callback =
+        [this](rclcpp::QOSDeadlineRequestedInfo & info)
+        {
+            RCLCPP_WARN(
+            this->get_logger(),
+            "Subscription deadline missed: total_count=%d, total_count_change=%d",
+            info.total_count,
+            info.total_count_change);
+        };
+
+    // Publisher QoS
+    auto qos_profile_pub = rclcpp::QoS(rclcpp::KeepLast(10));
+    qos_profile_pub.reliable();
+    qos_profile_pub.transient_local();
+
+    // Subscriber QoS
+    auto qos_profile_sub = rclcpp::QoS(rclcpp::KeepLast(1));
+    qos_profile_sub.reliable();
+    qos_profile_sub.transient_local();
+    qos_profile_sub.deadline(rclcpp::Duration::from_seconds(1.0 / loop_rate_hz_ * 1.2));
+
     // Create Subscribers
     sub_target_ = this->create_subscription<interfaces::msg::Target>(
-        "target", qos_profile,
-        std::bind(&Display::CallbackTarget, this, std::placeholders::_1));
+        "target", qos_profile_sub,
+        std::bind(&Display::CallbackTarget, this, std::placeholders::_1),
+        sub_options);
     
     sub_state_ = this->create_subscription<interfaces::msg::State>(
-        "state", qos_profile,
-        std::bind(&Display::CallbackState, this, std::placeholders::_1));
+        "state", qos_profile_sub,
+        std::bind(&Display::CallbackState, this, std::placeholders::_1),
+        sub_options);
 
     // Create Publishers
     pub_position_marker_ = this->create_publisher<visualization_msgs::msg::Marker>(
-        "position_marker", qos_profile);
+        "position_marker", qos_profile_pub);
     pub_speed_marker_ = this->create_publisher<visualization_msgs::msg::Marker>(
-        "speed_marker", qos_profile);
+        "speed_marker", qos_profile_pub);
     pub_target_marker_ = this->create_publisher<visualization_msgs::msg::Marker>(
-        "target_marker", qos_profile);
+        "target_marker", qos_profile_pub);
 
     // Initialize offset quaternion for model orientation adjustment
     q_offset.setRPY(M_PI/2.0, 0.0, M_PI/2.0);    // rotate mesh to align with x-forward

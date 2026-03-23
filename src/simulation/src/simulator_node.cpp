@@ -104,16 +104,35 @@ Simulator::Simulator()
     last_cmd_.rwa_torque_cmd = std::array<double, 4>{};
 
     // QoS settings
+    // Event Callbacks for QoS
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.event_callbacks.deadline_callback =
+        [this](rclcpp::QOSDeadlineRequestedInfo & info)
+        {
+            RCLCPP_WARN(
+            this->get_logger(),
+            "Subscription deadline missed: total_count=%d, total_count_change=%d",
+            info.total_count,
+            info.total_count_change);
+        };
+
     // Publisher QoS
-    auto qos_profile_pub = rclcpp::QoS(rclcpp::KeepLast(10));
+    auto qos_profile_pub = rclcpp::QoS(rclcpp::KeepLast(1));
+    qos_profile_pub.reliable();
+    qos_profile_pub.transient_local();
+    qos_profile_pub.deadline(rclcpp::Duration::from_seconds(1.0 / loop_rate_hz_));
 
     // Subscriber QoS
     auto qos_profile_sub = rclcpp::QoS(rclcpp::KeepLast(1));
+    qos_profile_sub.reliable();
+    qos_profile_sub.transient_local();
+    qos_profile_sub.deadline(rclcpp::Duration::from_seconds(1.0 / loop_rate_hz_ * 1.2));
 
     // Subscribers Initialization
     sub_actuator_ = this->create_subscription<Actuator>(
         "actuator", qos_profile_sub,
-        std::bind(&Simulator::CallbackActuator, this, std::placeholders::_1));
+        std::bind(&Simulator::CallbackActuator, this, std::placeholders::_1),
+        sub_options);
 
     // Publishers Initialization
     pub_state_ = this->create_publisher<State>(

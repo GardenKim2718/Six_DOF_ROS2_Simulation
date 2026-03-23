@@ -19,9 +19,6 @@ Guidance::Guidance()
 {
     RCLCPP_INFO(this->get_logger(), "Initialize Guidance node...");
     
-    //QoS settings
-    auto qos_profile = rclcpp::QoS(rclcpp::KeepLast(10));
-    
     // Declare Parameters
     this->declare_parameter("loop_rate_hz", loop_rate_hz_);
 
@@ -68,17 +65,43 @@ Guidance::Guidance()
         target_qx_, target_qy_, target_qz_, target_qw_,
         target_wx_, target_wy_, target_wz_);
 
+    // QoS settings
+    // Event Callbacks for QoS
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.event_callbacks.deadline_callback =
+        [this](rclcpp::QOSDeadlineRequestedInfo & info)
+        {
+            RCLCPP_WARN(
+            this->get_logger(),
+            "Subscription deadline missed: total_count=%d, total_count_change=%d",
+            info.total_count,
+            info.total_count_change);
+        };
+
+    // Publisher QoS
+    auto qos_profile_pub = rclcpp::QoS(rclcpp::KeepLast(1));
+    qos_profile_pub.reliable();
+    qos_profile_pub.transient_local();
+    qos_profile_pub.deadline(rclcpp::Duration::from_seconds(1.0 / loop_rate_hz_));
+
+    // Subscriber QoS
+    auto qos_profile_sub = rclcpp::QoS(rclcpp::KeepLast(1));
+    qos_profile_sub.reliable();
+    qos_profile_sub.transient_local();
+    qos_profile_sub.deadline(rclcpp::Duration::from_seconds(1.0 / loop_rate_hz_ * 1.2));
+
     // Subscribers Initialization
     sub_navigation_ = this->create_subscription<interfaces::msg::Navigation>(
-        "navigation", qos_profile,
-        std::bind(&Guidance::CallbackNavigation, this, std::placeholders::_1));
+        "navigation", qos_profile_sub,
+        std::bind(&Guidance::CallbackNavigation, this, std::placeholders::_1),
+        sub_options);
 
     // Publishers Initialization
     pub_guidance_ = this->create_publisher<interfaces::msg::Guidance>(
-        "guidance", qos_profile);
+        "guidance", qos_profile_pub);
     
     pub_target_ = this->create_publisher<interfaces::msg::Target>(
-        "target", qos_profile);
+        "target", qos_profile_pub);
 
     // Steady clock initialization
     steady_clock_ = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
