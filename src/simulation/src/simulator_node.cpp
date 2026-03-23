@@ -105,11 +105,8 @@ Simulator::Simulator()
 
     // QoS settings
     // Publisher QoS
-    auto qos_profile_pub = rclcpp::QoS(rclcpp::KeepLast(10),);
-    qos_profile_pub.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
-    qos_profile_pub.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
-    qos_profile_pub.deadline(std::chrono::milliseconds((int64_t)(1000 / loop_rate_hz_)));
-    qos_profile_pub.life
+    auto qos_profile_pub = rclcpp::QoS(rclcpp::KeepLast(10));
+
     // Subscriber QoS
     auto qos_profile_sub = rclcpp::QoS(rclcpp::KeepLast(1));
 
