@@ -10,6 +10,7 @@
  *            2026-03-03 edited by Chungwon Kim (added rotational guidance logic based on Apollo Powered Descent Guidance application on attitude guidance)
  *            2026-03-05 updated by Chungwon Kim to use steady clock instead of wall timer
  *            2026-03-05 updated by Chungwon Kim due to addition of navigation
+ *            2026-03-23 updated by Chungwon Kim to update QoS policy
  */
 
 #include "fsw/guidance_node.hpp"

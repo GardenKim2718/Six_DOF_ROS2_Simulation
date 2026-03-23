@@ -15,6 +15,7 @@ find_package(visualization_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(rviz_2d_overlay_msgs REQUIRED)
 
 # include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -29,7 +30,6 @@ ament_target_dependencies(
    geometry_msgs
    tf2
    tf2_ros
-   visualization_msgs
 )
 target_link_libraries(simulator_node Eigen3::Eigen)
 
@@ -49,6 +49,7 @@ ament_target_dependencies(
    tf2
    tf2_ros
    visualization_msgs
+   rviz_2d_overlay_msgs
 )
 
 target_include_directories(display_node PUBLIC

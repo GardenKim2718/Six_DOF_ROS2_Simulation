@@ -17,6 +17,7 @@
   <depend>visualization_msgs</depend>
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
+  <depend>rviz_2d_overlay_msgs</depend>
 
   <depend>interfaces</depend>
 
