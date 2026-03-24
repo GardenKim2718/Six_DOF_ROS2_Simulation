@@ -13,9 +13,6 @@
 
 #include "simulation/display_node.hpp"
 
-#include <iomanip>
-#include <sstream>
-
 Display::Display(double &loop_rate_hz_)
 : Node("display_node")
 {
