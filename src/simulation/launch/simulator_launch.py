@@ -64,7 +64,7 @@ def generate_launch_description():
             PathJoinSubstitution([
                 FindPackageShare('simulation'),
                 'resources',
-                'rviz2_config.rviz'
+                'six_dof_simulation.rviz'
             ])
         ]
     )
