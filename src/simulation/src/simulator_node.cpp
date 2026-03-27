@@ -10,6 +10,7 @@
  *            2026-03-05 updated by Chungwon Kim due to addition of actuator node
  *            2026-03-11 updated by Chungwon Kim to add RWA and thruster dynamics
  *            2026-03-23 updated by Chungwon Kim to update QoS policy
+ *            2026-03-27 updated by Chungwon Kim to set subscriber deadline QoS based on FSW loop rate
  */
 
 #include "simulation/simulator_node.hpp"
@@ -127,7 +128,7 @@ Simulator::Simulator()
     auto qos_profile_sub = rclcpp::QoS(rclcpp::KeepLast(1));
     qos_profile_sub.reliable();
     qos_profile_sub.transient_local();
-    qos_profile_sub.deadline(rclcpp::Duration::from_seconds(1.0 / loop_rate_hz_ * 1.2));
+    qos_profile_sub.deadline(rclcpp::Duration::from_seconds(1.0 / fsw_loop_rate_hz_ * 1.2));
 
     // Subscribers Initialization
     sub_actuator_ = this->create_subscription<Actuator>(

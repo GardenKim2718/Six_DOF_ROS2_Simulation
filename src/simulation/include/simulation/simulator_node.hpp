@@ -9,6 +9,7 @@
  *            2026-03-05 updated by Chungwon Kim to use steady clock instead of wall timer
  *            2026-03-05 updated by Chungwon Kim due to addition of actuator node
  *            2026-03-11 updated by Chungwon Kim to add RWA and thruster dynamics
+ *            2026-03-27 updated by Chungwon Kim to set subscriber deadline QoS based on FSW loop rate
  */
 
 #ifndef __simulator_node_hpp__
@@ -121,6 +122,7 @@ private:
 
     // loop rate
     double loop_rate_hz_{100.0};
+    const double fsw_loop_rate_hz_{8.0};
 
     // declare the additional variables for yourself
     bool sim_initialized_{false};

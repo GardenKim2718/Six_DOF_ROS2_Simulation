@@ -12,7 +12,7 @@ def generate_launch_description():
         name='simulator_node',
         output='screen',
         parameters=[{
-            'loop_rate_hz': 8.0,
+            'loop_rate_hz': 200.0,
             'id': "Ego",
             'frame_id': "map",
             'initial_time': 0.0,

@@ -2,3 +2,4 @@ build/
 install/
 log/
 src/eiquadprog/
+six_dof_simulation.bundle
