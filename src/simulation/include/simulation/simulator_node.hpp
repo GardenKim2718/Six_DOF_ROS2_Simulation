@@ -68,6 +68,7 @@ private:
     {
         std::lock_guard<std::mutex> lock(mutex_actuator_);
         last_cmd_ = *msg;
+        
     }
 
     inline double wrapToPi(double angle)

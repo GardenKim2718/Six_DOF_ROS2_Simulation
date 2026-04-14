@@ -51,6 +51,7 @@ ament_target_dependencies(
    visualization_msgs
    rviz_2d_overlay_msgs
 )
+target_link_libraries(display_node Eigen3::Eigen)
 
 target_include_directories(display_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

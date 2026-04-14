@@ -136,6 +136,11 @@ void Display::Run()
     // Marker display duration
     const rclcpp::Duration marker_duration = rclcpp::Duration(0, int64_t(1.0/loop_rate_hz_*1e9));
 
+    // TF2 Broadcast
+    if(b_is_sim_initialized_ && b_is_target_initialized_) {
+        TF2Broadcast(sim_time_, state, target);
+    }
+
     // Display Target
     if(b_is_target_initialized_){
         DisplayTarget(sim_time_, target, marker_duration);
@@ -152,15 +157,18 @@ void Display::Run()
     }
 }
 
-void Display::DisplayState(const rclcpp::Time& time,
+void Display::TF2Broadcast(const rclcpp::Time& time,
                            const interfaces::msg::State& state,
-                           const rclcpp::Duration& duration) {
-
-    // Broadcast TF for the ego frame
+                           const interfaces::msg::Target& target)
+{
+    // TF2 Broadcaster
     geometry_msgs::msg::TransformStamped tf_state;
+    geometry_msgs::msg::TransformStamped tf_target;
+
+    // Ego frame
     tf_state.header.stamp = time;
-    tf_state.header.frame_id = state.header.frame_id;   // e.g., "world"
-    tf_state.child_frame_id  = state.id + "_frame";     // e.g., "ego_frame"
+    tf_state.header.frame_id = state.header.frame_id;
+    tf_state.child_frame_id  = state.id + "_frame";
 
     tf_state.transform.translation.x = state.pose.position.x;
     tf_state.transform.translation.y = state.pose.position.y;
@@ -173,6 +181,35 @@ void Display::DisplayState(const rclcpp::Time& time,
 
     tf_broadcaster_->sendTransform(tf_state);
 
+    // Target frame
+    tf_target.header.stamp = time;
+    tf_target.header.frame_id = state.id + "_frame";
+    tf_target.child_frame_id  = target.id + "_target_frame";
+
+    Eigen::Vector3d ego_pos(state.pose.position.x, state.pose.position.y, state.pose.position.z);
+    Eigen::Quaterniond q_ego(state.pose.orientation.w, state.pose.orientation.x, state.pose.orientation.y, state.pose.orientation.z);
+    Eigen::Vector3d target_pos(target.pose.position.x, target.pose.position.y, target.pose.position.z);
+    Eigen::Quaterniond q_target(target.pose.orientation.w, target.pose.orientation.x, target.pose.orientation.y, target.pose.orientation.z);
+
+    // Compute relative transform from ego to target
+    Eigen::Quaterniond q_rel = q_target * q_ego.conjugate();
+    Eigen::Vector3d pos_rel = q_ego.conjugate() * (target_pos - ego_pos);
+
+    tf_target.transform.translation.x = pos_rel.x();
+    tf_target.transform.translation.y = pos_rel.y();
+    tf_target.transform.translation.z = pos_rel.z();
+
+    tf_target.transform.rotation.x = q_rel.x();
+    tf_target.transform.rotation.y = q_rel.y();
+    tf_target.transform.rotation.z = q_rel.z();
+    tf_target.transform.rotation.w = q_rel.w();
+
+    tf_broadcaster_->sendTransform(tf_target);
+}
+
+void Display::DisplayState(const rclcpp::Time& time,
+                           const interfaces::msg::State& state,
+                           const rclcpp::Duration& duration) {
     // Rendering of spacecraft current state
     visualization_msgs::msg::Marker ego_marker;
     visualization_msgs::msg::Marker speed_marker;
@@ -234,8 +271,8 @@ void Display::DisplayState(const rclcpp::Time& time,
                            state.pose.orientation.z,
                            state.pose.orientation.w);
 
-    tf2::Matrix3x3 D_body(q_body);
-    tf2::Vector3 v_body = D_body.transpose() * v_inertial;
+    // Rotate velocity to body frame
+    tf2::Vector3 v_body = tf2::quatRotate(q_body.inverse(), v_inertial);
     
     const double vx = v_body.x();
     const double vy = v_body.y();
@@ -294,24 +331,8 @@ void Display::DisplayState(const rclcpp::Time& time,
 void Display::DisplayTarget(const rclcpp::Time& time,
                             const interfaces::msg::Target& target,
                             const rclcpp::Duration& duration) {
+                                
     visualization_msgs::msg::Marker target_marker;
-
-    // Broadcast TF for the target frame
-    geometry_msgs::msg::TransformStamped tf_target;
-    tf_target.header.stamp = time;
-    tf_target.header.frame_id = target.header.frame_id;   // e.g., "world"
-    tf_target.child_frame_id  = target.id + "_target_frame";
-
-    tf_target.transform.translation.x = target.pose.position.x;
-    tf_target.transform.translation.y = target.pose.position.y;
-    tf_target.transform.translation.z = target.pose.position.z;
-
-    tf_target.transform.rotation.x = target.pose.orientation.x;
-    tf_target.transform.rotation.y = target.pose.orientation.y;
-    tf_target.transform.rotation.z = target.pose.orientation.z;
-    tf_target.transform.rotation.w = target.pose.orientation.w;
-
-    tf_broadcaster_->sendTransform(tf_target);
 
     //Rendering of target state
     target_marker.ns = target.id + "_target";
