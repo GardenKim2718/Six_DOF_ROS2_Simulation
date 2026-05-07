@@ -36,15 +36,15 @@ public:
   Evaluation();
   ~Evaluation();
 
-  void Init();
-  void Run();
-  void GetParameters();
+  void init();
+  void run();
+  void get_parameters();
 
   private:
     // add your member functions and variables here
 
     // Callback function for command subscription
-    inline void CallbackState(
+    inline void callback_state(
         const interfaces::msg::State::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_state_);
@@ -52,7 +52,7 @@ public:
         b_simulator_initialized_ = true;
     }
 
-    inline void CallbackActuator(
+    inline void callback_actuator(
         const interfaces::msg::Actuator::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_actuator_);
@@ -60,7 +60,7 @@ public:
         b_actuator_initialized_ = true;
     }
 
-    inline void CallbackCommand(
+    inline void callback_command(
         const interfaces::msg::Command::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_command_);
@@ -68,7 +68,7 @@ public:
         b_control_initialized_ = true;
     }
 
-    inline void CallbackGuidance(
+    inline void callback_guidance(
         const interfaces::msg::Guidance::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_guidance_);
@@ -76,7 +76,7 @@ public:
         b_guidance_initialized_ = true;
     }
 
-    inline void CallbackTarget(
+    inline void callback_target(
         const interfaces::msg::Target::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_target_);

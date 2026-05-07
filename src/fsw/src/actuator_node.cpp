@@ -27,7 +27,7 @@ Actuator::Actuator()
     this->declare_parameter("lambda_qp", lambda_qp_);
 
     // Get parameters
-    GetParameters();
+    get_parameters();
 
     RCLCPP_INFO(this->get_logger(),
         "Control Node Parameters: loop_rate_hz=%.3f", loop_rate_hz_);
@@ -70,12 +70,12 @@ Actuator::Actuator()
     // Subscribers Initialization
     sub_command_ = this->create_subscription<interfaces::msg::Command>(
         "command", qos_profile_sub,
-        std::bind(&Actuator::CallbackCommand, this, std::placeholders::_1),
+        std::bind(&Actuator::callback_command, this, std::placeholders::_1),
         sub_options);
 
     sub_navigation_ = this->create_subscription<interfaces::msg::Navigation>(
         "navigation", qos_profile_sub,
-        std::bind(&Actuator::CallbackNavigation, this, std::placeholders::_1),
+        std::bind(&Actuator::callback_navigation, this, std::placeholders::_1),
         sub_options);
 
     // Publishers Initialization
@@ -85,7 +85,7 @@ Actuator::Actuator()
     // Steady clock initialization
     steady_clock_ = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
 
-    // Run Contol Loop
+    // run Contol Loop
     const auto period_ns =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::duration<double>(1.0 / loop_rate_hz_));
@@ -95,7 +95,7 @@ Actuator::Actuator()
         this->get_node_timers_interface(),
         steady_clock_,
         period_ns,
-        std::bind(&Actuator::Run, this)
+        std::bind(&Actuator::run, this)
     );
 }
 
@@ -104,7 +104,7 @@ Actuator::~Actuator()
     RCLCPP_INFO(this->get_logger(), "Shutting down Actuator node...");
 }
 
-void Actuator::GetParameters()
+void Actuator::get_parameters()
 {
     // fetch parameters and store them in member variables
     this->get_parameter("loop_rate_hz", loop_rate_hz_);
@@ -115,7 +115,7 @@ void Actuator::GetParameters()
     this->get_parameter("lambda_qp", lambda_qp_);
 }
 
-void Actuator::Init()
+void Actuator::init()
 {
     // Log
     RCLCPP_INFO(this->get_logger(),
@@ -168,7 +168,7 @@ void Actuator::Init()
     thruster_qp_solver_.reset(12, 0, 24);
 }
 
-void Actuator::Run()
+void Actuator::run()
 {
     if (!b_navigation_initialized_ || !b_control_initialized_) {
         RCLCPP_WARN(this->get_logger(),
@@ -178,7 +178,7 @@ void Actuator::Run()
 
     // handle initialization
     if (!b_actuator_initialized_) {
-        Init();
+        init();
         b_actuator_initialized_ = true;
     }
 
@@ -254,7 +254,7 @@ void Actuator::Run()
     wrench_cmd << force_cmd, thruster_torque_cmd;
 
     Eigen::Matrix<double, 12,1> thruster_cmd;
-    bool qp_success = SolveThrusterAllocationQP(wrench_cmd, thruster_cmd);
+    bool qp_success = solve_thruster_allocation_qp(wrench_cmd, thruster_cmd);
 
     if (!qp_success) {
         RCLCPP_ERROR(this->get_logger(),
@@ -277,7 +277,7 @@ void Actuator::Run()
     pub_actuator_->publish(o_actuator_);
 }
 
-bool Actuator::SolveThrusterAllocationQP(
+bool Actuator::solve_thruster_allocation_qp(
     const Eigen::Matrix<double, 6, 1>& wrench_cmd,
     Eigen::Matrix<double, 12, 1>& thruster_cmd)
 {

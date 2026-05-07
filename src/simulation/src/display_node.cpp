@@ -54,17 +54,17 @@ Display::Display(double &loop_rate_hz_)
     // Create Subscribers
     sub_target_ = this->create_subscription<interfaces::msg::Target>(
         "target", qos_profile_sub,
-        std::bind(&Display::CallbackTarget, this, std::placeholders::_1),
+        std::bind(&Display::callback_target, this, std::placeholders::_1),
         sub_options);
     
     sub_state_ = this->create_subscription<interfaces::msg::State>(
         "state", qos_profile_sub,
-        std::bind(&Display::CallbackState, this, std::placeholders::_1),
+        std::bind(&Display::callback_state, this, std::placeholders::_1),
         sub_options);
 
     sub_guidance_ = this->create_subscription<interfaces::msg::Guidance>(
         "guidance", qos_profile_sub,
-        std::bind(&Display::CallbackGuidance, this, std::placeholders::_1),
+        std::bind(&Display::callback_guidance, this, std::placeholders::_1),
         sub_options);
 
     // Create Publishers
@@ -94,7 +94,7 @@ Display::Display(double &loop_rate_hz_)
         this->get_node_timers_interface(),
         steady_clock_,
         period_ns,
-        std::bind(&Display::Run, this)
+        std::bind(&Display::run, this)
     );
 }
 
@@ -103,7 +103,7 @@ Display::~Display()
     RCLCPP_INFO(this->get_logger(), "Shutting down Display node...");
 }
 
-void Display::Run()
+void Display::run()
 {
     // get subscribed data
     interfaces::msg::State state;

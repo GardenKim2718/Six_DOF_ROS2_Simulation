@@ -57,20 +57,20 @@ public:
     Simulator();
     ~Simulator();
 
-    void Run();
-    void Init();
-    void GetParameters();
+    void run();
+    void init();
+    void get_parameters();
 
 private:
     // Callback function for actuator subscription
-    inline void CallbackActuator(
+    inline void callback_actuator(
         const interfaces::msg::Actuator::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_actuator_);
         last_cmd_ = *msg;
     }
 
-    inline double wrapToPi(double angle)
+    inline double wrap_to_pi(double angle)
     {
         // wrap to [-pi, pi)
         angle = std::fmod(angle + M_PI, 2.0 * M_PI);
@@ -79,16 +79,16 @@ private:
         return angle - M_PI;
     }
 
-    StateDerivative ComputeStateDerivative(
+    StateDerivative compute_state_derivative(
         const interfaces::msg::State &state,
         const interfaces::msg::Actuator &cmd);
 
-    interfaces::msg::State AddScaledDerivative(
+    interfaces::msg::State add_scaled_derivative(
         const interfaces::msg::State& s,
         const StateDerivative& k,
         const double h) const;
 
-    interfaces::msg::State PropagateStateRK4(
+    interfaces::msg::State propagate_state_rk4(
         const interfaces::msg::State &prev,
         const interfaces::msg::Actuator &cmd,
         const double dt);

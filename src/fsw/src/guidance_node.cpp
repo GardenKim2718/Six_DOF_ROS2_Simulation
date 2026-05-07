@@ -50,7 +50,7 @@ Guidance::Guidance()
     this->declare_parameter("angular_kd", angular_kd_);
 
     // Get parameters
-    GetParameters();
+    get_parameters();
 
     RCLCPP_INFO(this->get_logger(),
         "Control Node Parameters: loop_rate_hz=%.3f", loop_rate_hz_);
@@ -94,7 +94,7 @@ Guidance::Guidance()
     // Subscribers Initialization
     sub_navigation_ = this->create_subscription<interfaces::msg::Navigation>(
         "navigation", qos_profile_sub,
-        std::bind(&Guidance::CallbackNavigation, this, std::placeholders::_1),
+        std::bind(&Guidance::callback_navigation, this, std::placeholders::_1),
         sub_options);
 
     // Publishers Initialization
@@ -114,13 +114,13 @@ Guidance::Guidance()
         std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::duration<double>(1.0 / loop_rate_hz_));
     
-    // Run Contol Loop
+    // run Contol Loop
     t_run_node_ = rclcpp::create_timer(
         this->get_node_base_interface(),
         this->get_node_timers_interface(),
         steady_clock_,
         period_ns,
-        std::bind(&Guidance::Run, this)
+        std::bind(&Guidance::run, this)
     );
 }
 
@@ -129,7 +129,7 @@ Guidance::~Guidance()
     RCLCPP_INFO(this->get_logger(), "Shutting down Guidance node...");
 }
 
-void Guidance::GetParameters()
+void Guidance::get_parameters()
 {
     // fetch parameters and store them in member variables
     this->get_parameter("loop_rate_hz", loop_rate_hz_);
@@ -180,7 +180,7 @@ void Guidance::GetParameters()
     inertia_inv_ = inertia_.inverse();
 }
 
-void Guidance::Init(const interfaces::msg::Navigation& initial_state)
+void Guidance::init(const interfaces::msg::Navigation& initial_state)
 {
     // Log
     RCLCPP_INFO(this->get_logger(),
@@ -212,7 +212,7 @@ void Guidance::Init(const interfaces::msg::Navigation& initial_state)
     o_target_.vel.angular.z = target_wz_;
 }
 
-void Guidance::Run()
+void Guidance::run()
 {
     // handle initialization
     if (!b_navigation_initialized_) {
@@ -222,7 +222,7 @@ void Guidance::Run()
     }
 
     if (!b_guidance_initialized_) {
-        Init(last_state_);
+        init(last_state_);
         b_guidance_initialized_ = true;
     }
 
@@ -263,7 +263,7 @@ void Guidance::Run()
 
     if (!b_linear_guidance_initialized_)
     {
-        FindTimeToGoLinear(x0, xf, v0, vf, acc_limit_);
+        find_time_to_go_linear(x0, xf, v0, vf, acc_limit_);
         b_linear_guidance_initialized_ = true;
     } else
     {
@@ -277,7 +277,7 @@ void Guidance::Run()
     }
 
     if (b_linear_guidance_active_){
-        LinearGuidance(x0, xf, v0, vf, T_go_linear_, accel_cmd_);
+        linear_guidance(x0, xf, v0, vf, T_go_linear_, accel_cmd_);
     } else {
         accel_cmd_ = Eigen::Vector3d::Zero();
     }
@@ -297,7 +297,7 @@ void Guidance::Run()
         current_state.vel.angular.y,
         current_state.vel.angular.z);
 
-    err_quat_ = QuaternionSignCorrection(target_quat_ * QuaternionConjugate(curr_quat_));
+    err_quat_ = quaternion_sign_correction(target_quat_ * quaternion_conjugate(curr_quat_));
     err_ang_vel_ = target_ang_vel_ - curr_ang_speed_;
     
     eigen_vec_ = Eigen::Vector3d(err_quat_.x(), err_quat_.y(), err_quat_.z());
@@ -310,7 +310,7 @@ void Guidance::Run()
     double ang_acc_limit = 0.6 * max_torque_ / I_e_.norm();
 
     if (b_angular_guidance_active_){
-        AngularGuidance(
+        angular_guidance(
             err_quat_, curr_ang_speed_, target_ang_vel_,
             T_go_angular_, ang_acc_limit, ang_accel_cmd_, b_angular_guidance_active_
         );
@@ -336,7 +336,7 @@ void Guidance::Run()
     pub_target_->publish(o_target_);
 }
 
-void Guidance::LinearGuidance(
+void Guidance::linear_guidance(
     const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
     const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
     double& T_go_linear_, Eigen::Vector3d& accel_cmd_)
@@ -349,7 +349,7 @@ void Guidance::LinearGuidance(
                  2.0 * (vf - v0) / T_go_linear_;
 }
 
-void Guidance::FindTimeToGoLinear(
+void Guidance::find_time_to_go_linear(
     const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
     const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
     const double acc_limit)
@@ -366,7 +366,7 @@ void Guidance::FindTimeToGoLinear(
     bool Guess1_ = false;
     bool Guess2_ = false;
     
-    Guess1_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess, acc_limit);
+    Guess1_ = apollo_powered_descent_guidance_validate(x0, xf, v0, vf, Tgo_guess, acc_limit);
     Guess2_ = Guess1_;
 
     while (Guess2_ == Guess1_)
@@ -389,13 +389,13 @@ void Guidance::FindTimeToGoLinear(
         {
             Tgo_guess2 = Tgo_guess2 + Tgo_delta_;
         }
-        Guess2_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess2, acc_limit);
+        Guess2_ = apollo_powered_descent_guidance_validate(x0, xf, v0, vf, Tgo_guess2, acc_limit);
     }
 
     while (!Tgo_converged)
     {
         double Tgo_guess_mid_ = 0.5 * (Tgo_guess + Tgo_guess2);
-        Guess1_ = ApolloPoweredDescentGuidanceValidate(x0, xf, v0, vf, Tgo_guess_mid_, acc_limit);
+        Guess1_ = apollo_powered_descent_guidance_validate(x0, xf, v0, vf, Tgo_guess_mid_, acc_limit);
 
         if (abs(Tgo_guess - Tgo_guess2) < Tgo_tol){
             Tgo_converged = true;
@@ -412,7 +412,7 @@ void Guidance::FindTimeToGoLinear(
         "Time to Go for Linear Guidance: %.3f s", T_go_linear_);
 }
 
-bool Guidance::ApolloPoweredDescentGuidanceValidate(
+bool Guidance::apollo_powered_descent_guidance_validate(
         const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
         const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
         const double T_go, const double acc_limit)
@@ -430,7 +430,7 @@ bool Guidance::ApolloPoweredDescentGuidanceValidate(
     return max_acc < acc_limit;
 }
 
-void Guidance::AngularGuidance(
+void Guidance::angular_guidance(
     const Eigen::Quaterniond err_quat,
     const Eigen::Vector3d curr_ang_speed, const Eigen::Vector3d target_ang_vel,
     double &T_go_angular_, const double ang_acc_limit_,

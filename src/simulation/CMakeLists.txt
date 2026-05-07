@@ -69,8 +69,7 @@ install(DIRECTORY include/
 )
 
 install(
-  DIRECTORY launch
-  DIRECTORY resources
+  DIRECTORY launch resources
   DESTINATION share/${PROJECT_NAME}
 )
 

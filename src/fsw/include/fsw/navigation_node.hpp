@@ -33,15 +33,15 @@ public:
   Navigation();
   ~Navigation();
 
-  void Init();
-  void Run();
-  void GetParameters();
+  void init();
+  void run();
+  void get_parameters();
 
   private:
     // add your member functions and variables here
 
     // Callback function for command subscription
-    inline void CallbackState(
+    inline void callback_state(
         const interfaces::msg::State::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_state_);

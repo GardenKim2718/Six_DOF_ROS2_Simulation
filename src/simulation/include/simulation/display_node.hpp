@@ -40,13 +40,13 @@ class Display : public rclcpp::Node {
         explicit Display(double &loop_rate_hz_);
         ~Display();
 
-        void Init();
-        void Run();
+        void init();
+        void run();
         void UpdateParameters();
     
     private :
     // Callback function for state subscription
-    inline void CallbackState(
+    inline void callback_state(
         const interfaces::msg::State::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_state_);
@@ -55,7 +55,7 @@ class Display : public rclcpp::Node {
     }
 
     // Callback function for target state subscription
-    inline void CallbackTarget(
+    inline void callback_target(
         const interfaces::msg::Target::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_target_);
@@ -64,7 +64,7 @@ class Display : public rclcpp::Node {
     }
 
     // Callback function for guidance subscription
-    inline void CallbackGuidance(
+    inline void callback_guidance(
         const interfaces::msg::Guidance::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_guidance_);

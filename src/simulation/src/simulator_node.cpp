@@ -62,7 +62,7 @@ Simulator::Simulator()
     this->declare_parameter<double>("max_rwa_momentum", 0.1);
     this->declare_parameter<double>("max_rwa_torque", 0.01);
 
-    GetParameters();
+    get_parameters();
 
     RCLCPP_INFO(this->get_logger(),
                 "Simulator Parameters: initial_time=%.3f, loop_rate_hz=%.3f, id=%s, frame_id=%s",
@@ -133,7 +133,7 @@ Simulator::Simulator()
     // Subscribers Initialization
     sub_actuator_ = this->create_subscription<Actuator>(
         "actuator", qos_profile_sub,
-        std::bind(&Simulator::CallbackActuator, this, std::placeholders::_1),
+        std::bind(&Simulator::callback_actuator, this, std::placeholders::_1),
         sub_options);
 
     // Publishers Initialization
@@ -152,7 +152,7 @@ Simulator::Simulator()
         this->get_node_timers_interface(),
         steady_clock_,
         period_ns,
-        std::bind(&Simulator::Run, this));
+        std::bind(&Simulator::run, this));
 
     // Simulator Initialization
     o_state_ = initial_state_;
@@ -164,7 +164,7 @@ Simulator::~Simulator()
     RCLCPP_INFO(this->get_logger(), "Shutting down Simulator node...");
 }
 
-void Simulator::GetParameters()
+void Simulator::get_parameters()
 {
     // This function can be used to fetch parameters when needed
     this->get_parameter("initial_time", initial_time_);
@@ -225,7 +225,7 @@ void Simulator::GetParameters()
     this->get_parameter("max_rwa_torque", max_rwa_torque_);
 }
 
-void Simulator::Init()
+void Simulator::init()
 {
     // Log
     RCLCPP_INFO(this->get_logger(),
@@ -275,11 +275,11 @@ void Simulator::Init()
     }
 }
 
-void Simulator::Run()
+void Simulator::run()
 {
     if(!sim_initialized_) // first run initializaiton
     {
-        Init();
+        init();
         sim_initialized_ = true;
         o_state_ = initial_state_;
     } else
@@ -307,7 +307,7 @@ void Simulator::Run()
             std::lock_guard<std::mutex> lock(mutex_actuator_);
             cmd = last_cmd_;
         }
-        o_state_ = PropagateStateRK4(o_state_, cmd, time_dt);
+        o_state_ = propagate_state_rk4(o_state_, cmd, time_dt);
     }
 
     // publish state
@@ -317,7 +317,7 @@ void Simulator::Run()
     sim_time_prev_ = sim_time_curr_;
 }
 
-StateDerivative Simulator::ComputeStateDerivative(
+StateDerivative Simulator::compute_state_derivative(
     const State &state,
     const Actuator &cmd)
 {
@@ -431,7 +431,7 @@ StateDerivative Simulator::ComputeStateDerivative(
     return derivative;
 }
 
-State Simulator::AddScaledDerivative(
+State Simulator::add_scaled_derivative(
     const State &s,
     const StateDerivative &k,
     const double h) const
@@ -464,22 +464,22 @@ State Simulator::AddScaledDerivative(
     return out;
 }
 
-State Simulator::PropagateStateRK4(
+State Simulator::propagate_state_rk4(
     const State &prev,
     const Actuator &cmd,
     const double dt)
 {
     // RK4
-    const StateDerivative k1 = ComputeStateDerivative(prev, cmd);
+    const StateDerivative k1 = compute_state_derivative(prev, cmd);
 
-    const State s2 = AddScaledDerivative(prev, k1, 0.5 * dt);
-    const StateDerivative k2 = ComputeStateDerivative(s2, cmd);
+    const State s2 = add_scaled_derivative(prev, k1, 0.5 * dt);
+    const StateDerivative k2 = compute_state_derivative(s2, cmd);
 
-    const State s3 = AddScaledDerivative(prev, k2, 0.5 * dt);
-    const StateDerivative k3 = ComputeStateDerivative(s3, cmd);
+    const State s3 = add_scaled_derivative(prev, k2, 0.5 * dt);
+    const StateDerivative k3 = compute_state_derivative(s3, cmd);
 
-    const State s4 = AddScaledDerivative(prev, k3, dt);
-    const StateDerivative k4 = ComputeStateDerivative(s4, cmd);
+    const State s4 = add_scaled_derivative(prev, k3, dt);
+    const StateDerivative k4 = compute_state_derivative(s4, cmd);
 
     State next = prev;
 

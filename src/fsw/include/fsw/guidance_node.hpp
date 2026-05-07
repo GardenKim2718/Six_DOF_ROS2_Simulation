@@ -37,15 +37,15 @@ public:
   Guidance();
   ~Guidance();
 
-  void Init(const interfaces::msg::Navigation& initial_state);
-  void Run();
-  void GetParameters();
+  void init(const interfaces::msg::Navigation& initial_state);
+  void run();
+  void get_parameters();
 
   private:
     // add your member functions and variables here
 
     // Callback function for command subscription
-    inline void CallbackNavigation(
+    inline void callback_navigation(
         const interfaces::msg::Navigation::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_navigation_);
@@ -54,14 +54,14 @@ public:
     }
 
     // Custom Functions
-    inline Eigen::Quaterniond QuaternionConjugate(
+    inline Eigen::Quaterniond quaternion_conjugate(
         const Eigen::Quaterniond& q)
     {
         // return conjugate of quaternion
         return Eigen::Quaterniond(q.w(), -q.x(), -q.y(), -q.z());
     }
 
-    inline Eigen::Quaterniond QuaternionSignCorrection(
+    inline Eigen::Quaterniond quaternion_sign_correction(
         const Eigen::Quaterniond& q)
     {
         // Ensure that the quaternion scalar part is non-negative
@@ -73,22 +73,22 @@ public:
         }
     }
 
-    void LinearGuidance(
+    void linear_guidance(
         const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
         const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
         double& T_go_linear_, Eigen::Vector3d& accel_cmd_);
     
-    void FindTimeToGoLinear(
+    void find_time_to_go_linear(
         const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
         const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
         const double acc_limit);
 
-    bool ApolloPoweredDescentGuidanceValidate(
+    bool apollo_powered_descent_guidance_validate(
         const Eigen::Vector3d &x0, const Eigen::Vector3d &xf,
         const Eigen::Vector3d &v0, const Eigen::Vector3d &vf,
         const double T_go, const double acc_limit);
 
-    void AngularGuidance(
+    void angular_guidance(
         const Eigen::Quaterniond err_quat,
         const Eigen::Vector3d curr_ang_speed, const Eigen::Vector3d target_ang_vel,
         double &T_go_angular_, const double ang_acc_limit_,

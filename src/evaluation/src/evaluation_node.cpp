@@ -35,7 +35,7 @@ Evaluation::Evaluation()
         std::vector<double>{0.0, 0.0, 0.0});
 
     // Get parameters
-    GetParameters();
+    get_parameters();
 
     RCLCPP_INFO(this->get_logger(),
         "Evaluation Node Parameters: loop_rate_hz=%.3f", loop_rate_hz_);
@@ -77,27 +77,27 @@ Evaluation::Evaluation()
     // Subscribers Initialization
     sub_state_ = this->create_subscription<interfaces::msg::State>(
         "state", qos_profile_sub,
-        std::bind(&Evaluation::CallbackState, this, std::placeholders::_1),
+        std::bind(&Evaluation::callback_state, this, std::placeholders::_1),
         sub_options);
 
     sub_actuator_ = this->create_subscription<interfaces::msg::Actuator>(
         "actuator", qos_profile_sub,
-        std::bind(&Evaluation::CallbackActuator, this, std::placeholders::_1),
+        std::bind(&Evaluation::callback_actuator, this, std::placeholders::_1),
         sub_options);
 
     sub_guidance_ = this->create_subscription<interfaces::msg::Guidance>(
         "guidance", qos_profile_sub,
-        std::bind(&Evaluation::CallbackGuidance, this, std::placeholders::_1),
+        std::bind(&Evaluation::callback_guidance, this, std::placeholders::_1),
         sub_options);
 
     sub_command_ = this->create_subscription<interfaces::msg::Command>(
         "command", qos_profile_sub,
-        std::bind(&Evaluation::CallbackCommand, this, std::placeholders::_1),
+        std::bind(&Evaluation::callback_command, this, std::placeholders::_1),
         sub_options);
 
     sub_target_ = this->create_subscription<interfaces::msg::Target>(
         "target", qos_profile_sub,
-        std::bind(&Evaluation::CallbackTarget, this, std::placeholders::_1),
+        std::bind(&Evaluation::callback_target, this, std::placeholders::_1),
         sub_options);
 
     // Publishers Initialization
@@ -110,7 +110,7 @@ Evaluation::Evaluation()
     // Timer Initialization
     rclcpp::Time current_time = steady_clock_->now();
 
-    // Run Evaluation Loop
+    // run Evaluation Loop
     const auto period_ns =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::duration<double>(1.0 / loop_rate_hz_));
@@ -120,7 +120,7 @@ Evaluation::Evaluation()
         this->get_node_timers_interface(),
         steady_clock_,
         period_ns,
-        std::bind(&Evaluation::Run, this)
+        std::bind(&Evaluation::run, this)
     );
 }
 
@@ -129,7 +129,7 @@ Evaluation::~Evaluation()
     RCLCPP_INFO(this->get_logger(), "Shutting down Evaluation node...");
 }
 
-void Evaluation::GetParameters()
+void Evaluation::get_parameters()
 {
     // fetch parameters and store them in member variables
     this->get_parameter("loop_rate_hz", loop_rate_hz_);
@@ -157,7 +157,7 @@ void Evaluation::GetParameters()
     inertia_inv_ = inertia_.inverse();
 }
 
-void Evaluation::Init()
+void Evaluation::init()
 {
     // Log
     RCLCPP_INFO(this->get_logger(),
@@ -200,11 +200,11 @@ void Evaluation::Init()
     }
 }
 
-void Evaluation::Run()
+void Evaluation::run()
 {
     // handle initialization
     if (!b_evaluation_initialized_) {
-        Init();
+        init();
         b_evaluation_initialized_ = true;
     }
 

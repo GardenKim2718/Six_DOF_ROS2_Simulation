@@ -21,7 +21,7 @@ Navigation::Navigation()
     this->declare_parameter<double>("loop_rate_hz", loop_rate_hz_);
 
     // Get parameters
-    GetParameters();
+    get_parameters();
 
     RCLCPP_INFO(this->get_logger(),
         "Navigation Node Parameters: loop_rate_hz=%.3f", loop_rate_hz_);
@@ -54,7 +54,7 @@ Navigation::Navigation()
     // Subscribers Initialization
     sub_state_ = this->create_subscription<interfaces::msg::State>(
         "state", qos_profile_sub,
-        std::bind(&Navigation::CallbackState, this, std::placeholders::_1),
+        std::bind(&Navigation::callback_state, this, std::placeholders::_1),
         sub_options);
     
     // Publishers Initialization
@@ -67,7 +67,7 @@ Navigation::Navigation()
     // Timer Initialization
     rclcpp::Time current_time = steady_clock_->now();
 
-    // Run Navigation Loop
+    // run Navigation Loop
     const auto period_ns =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::duration<double>(1.0 / loop_rate_hz_));
@@ -77,7 +77,7 @@ Navigation::Navigation()
         this->get_node_timers_interface(),
         steady_clock_,
         period_ns,
-        std::bind(&Navigation::Run, this)
+        std::bind(&Navigation::run, this)
     );
 }
 
@@ -86,20 +86,20 @@ Navigation::~Navigation()
     RCLCPP_INFO(this->get_logger(), "Shutting down Navigation node...");
 }
 
-void Navigation::GetParameters()
+void Navigation::get_parameters()
 {
     // fetch parameters and store them in member variables
     this->get_parameter("loop_rate_hz", loop_rate_hz_);
 }
 
-void Navigation::Init()
+void Navigation::init()
 {
     // Log
     RCLCPP_INFO(this->get_logger(),
         "Starting Navigation Node Loop with loop_rate_hz=%.3f", loop_rate_hz_);
 }
 
-void Navigation::Run()
+void Navigation::run()
 {
     // handle initialization
     if (!b_simulator_initialized_) {
@@ -109,7 +109,7 @@ void Navigation::Run()
     }
 
     if (!b_navigation_initialized_) {
-        Init();
+        init();
         b_navigation_initialized_ = true;
     }
 

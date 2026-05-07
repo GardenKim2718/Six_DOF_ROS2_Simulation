@@ -38,15 +38,15 @@ public:
   Control();
   ~Control();
 
-  void Init(const interfaces::msg::Navigation& initial_state);
-  void Run();
-  void GetParameters();
+  void init(const interfaces::msg::Navigation& initial_state);
+  void run();
+  void get_parameters();
 
   private:
     // add your member functions and variables here
 
     // Callback function for command subscription
-    inline void CallbackNavigation(
+    inline void callback_navigation(
         const interfaces::msg::Navigation::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_navigation_);
@@ -54,7 +54,7 @@ public:
         b_navigation_initialized_ = true;
     }
 
-    inline void CallbackTarget(
+    inline void callback_target(
         const interfaces::msg::Target::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_target_);
@@ -62,7 +62,7 @@ public:
         b_target_initialized_ = true;
     }
 
-    inline void CallbackGuidance(
+    inline void callback_guidance(
         const interfaces::msg::Guidance::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(mutex_guidance_);
@@ -71,14 +71,14 @@ public:
     }
 
     // Custom Functions
-    inline Eigen::Quaterniond QuaternionConjugate(
+    inline Eigen::Quaterniond quaternion_conjugate(
         const Eigen::Quaterniond &q)
     {
         // return conjugate of quaternion
         return Eigen::Quaterniond(q.w(), -q.x(), -q.y(), -q.z());
     }
 
-    inline Eigen::Quaterniond QuaternionSignCorrection(
+    inline Eigen::Quaterniond quaternion_sign_correction(
         const Eigen::Quaterniond &q)
     {
         // Ensure that the quaternion scalar part is non-negative

@@ -43,7 +43,7 @@ Control::Control()
     this->declare_parameter("max_torque", max_torque_);
 
     // Get parameters
-    GetParameters();
+    get_parameters();
 
     RCLCPP_INFO(this->get_logger(),
         "Control Node Parameters: loop_rate_hz=%.3f", loop_rate_hz_);
@@ -84,17 +84,17 @@ Control::Control()
     // Subscribers Initialization
     sub_navigation_ = this->create_subscription<interfaces::msg::Navigation>(
         "navigation", qos_profile_sub,
-        std::bind(&Control::CallbackNavigation, this, std::placeholders::_1),
+        std::bind(&Control::callback_navigation, this, std::placeholders::_1),
         sub_options);
 
     sub_guidance_ = this->create_subscription<interfaces::msg::Guidance>(
         "guidance", qos_profile_sub,
-        std::bind(&Control::CallbackGuidance, this, std::placeholders::_1),
+        std::bind(&Control::callback_guidance, this, std::placeholders::_1),
         sub_options);
 
     sub_target_ = this->create_subscription<interfaces::msg::Target>(
         "target", qos_profile_sub,
-        std::bind(&Control::CallbackTarget, this, std::placeholders::_1),
+        std::bind(&Control::callback_target, this, std::placeholders::_1),
         sub_options);
 
     // Publishers Initialization
@@ -107,7 +107,7 @@ Control::Control()
     // Timer Initialization
     rclcpp::Time current_time = steady_clock_->now();
 
-    // Run Contol Loop
+    // run Contol Loop
     const auto period_ns =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::duration<double>(1.0 / loop_rate_hz_));
@@ -117,7 +117,7 @@ Control::Control()
         this->get_node_timers_interface(),
         steady_clock_,
         period_ns,
-        std::bind(&Control::Run, this)
+        std::bind(&Control::run, this)
     );
 }
 
@@ -126,7 +126,7 @@ Control::~Control()
     RCLCPP_INFO(this->get_logger(), "Shutting down Control node...");
 }
 
-void Control::GetParameters()
+void Control::get_parameters()
 {
     // fetch parameters and store them in member variables
     this->get_parameter("loop_rate_hz", loop_rate_hz_);
@@ -159,7 +159,7 @@ void Control::GetParameters()
     inertia_inv_ = inertia_.inverse();
 }
 
-void Control::Init(const interfaces::msg::Navigation& initial_state)
+void Control::init(const interfaces::msg::Navigation& initial_state)
 {
     // Log
     RCLCPP_INFO(this->get_logger(),
@@ -193,7 +193,7 @@ void Control::Init(const interfaces::msg::Navigation& initial_state)
     }
 }
 
-void Control::Run()
+void Control::run()
 {
     // handle initialization
     if (!b_navigation_initialized_ || !b_guidance_initialized_ || !b_target_initialized_) {
@@ -203,7 +203,7 @@ void Control::Run()
     }
 
     if (!b_control_initialized_) {
-        Init(last_state_);
+        init(last_state_);
         b_control_initialized_ = true;
     }
 
@@ -285,7 +285,7 @@ void Control::Run()
             current_target.vel.angular.y,
             current_target.vel.angular.z);
 
-        err_quat_ = QuaternionSignCorrection(q_desired * QuaternionConjugate(q_current));
+        err_quat_ = quaternion_sign_correction(q_desired * quaternion_conjugate(q_current));
         Eigen::Vector3d err_quat_vec(
             err_quat_.x(), err_quat_.y(), err_quat_.z());
         
