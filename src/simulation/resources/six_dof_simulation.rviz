@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+<<<<<<< HEAD:src/simulation/resources/six_dof_simulation.rviz
         - /Inertial_frame_Axes1
         - /Ego_frame_Axes1
         - /Target_frame_Axes1
@@ -13,6 +14,13 @@ Panels:
         - /TextOverlay1
       Splitter Ratio: 0.6264705657958984
     Tree Height: 708
+=======
+        - /Axes1
+        - /Axes2
+        - /Axes3
+      Splitter Ratio: 0.5
+    Tree Height: 555
+>>>>>>> main:src/simulation/resources/rviz2_config.rviz
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -112,6 +120,7 @@ Visualization Manager:
       Plane Cell Count: 100
       Reference Frame: <Fixed Frame>
       Value: true
+<<<<<<< HEAD:src/simulation/resources/six_dof_simulation.rviz
     - Align Bottom: false
       Background Alpha: 0.800000011920929
       Background Color: 0; 0; 0
@@ -140,6 +149,22 @@ Visualization Manager:
       ver_alignment: top
       ver_dist: 0
       width: 128
+=======
+    - Class: rviz_default_plugins/Axes
+      Enabled: true
+      Length: 1
+      Name: Axes
+      Radius: 0.10000000149011612
+      Reference Frame: Ego_frame
+      Value: true
+    - Class: rviz_default_plugins/Axes
+      Enabled: true
+      Length: 1
+      Name: Axes
+      Radius: 0.10000000149011612
+      Reference Frame: Ego_target_frame
+      Value: true
+>>>>>>> main:src/simulation/resources/rviz2_config.rviz
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -201,7 +226,16 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
+<<<<<<< HEAD:src/simulation/resources/six_dof_simulation.rviz
       Pitch: 0.7853981852531433
+=======
+      Pitch: 1.4097964763641357
+      Point towards: -z axis
+      Position:
+        X: -1.3468661308288574
+        Y: 0.09418445825576782
+        Z: 11.891363143920898
+>>>>>>> main:src/simulation/resources/rviz2_config.rviz
       Target Frame: Ego_frame
       Value: ThirdPersonFollower (rviz_default_plugins)
       Yaw: 3.141592025756836
@@ -280,6 +314,12 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
+<<<<<<< HEAD:src/simulation/resources/six_dof_simulation.rviz
   Width: 1908
   X: -32
   Y: -32
+=======
+  Width: 1200
+  X: 232
+  Y: 17
+>>>>>>> main:src/simulation/resources/rviz2_config.rviz
