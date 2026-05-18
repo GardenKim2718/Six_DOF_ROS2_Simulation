@@ -43,7 +43,7 @@ a) $ source install/setup.bash
 b) $ bash launch.sh
    will automatically launch all the packages, nodes
 
-8. Changing Parameters (Recommended to use VS Code environment)
+8. Changing Parameters
 Info) all the parameters are connected via launch.xml files
       no need to re-build the packages after changing the parameters within launch files
 Warning) make sure that dynamic & hardware parameters for fsw and simulation packages matches each other
