@@ -17,7 +17,6 @@ a) unzip the given .tar.gz file within ROS2 workspace src folder
          >src
           >SIX_DOF_SIMULATION
 
-<<<<<<< HEAD
 5. eiquadprog install (QP solver)
 a) $ cd src/six_dof_simulation/src
 b) $ git clone --recursive https://github.com/stack-of-tasks/eiquadprog.git
@@ -26,11 +25,6 @@ c) $ cd ..
 6. Build
 a) move into the project directory (if you are not already in it)
    $ cd src/six_dof_simulation
-=======
-5. Build
-a) move into the project directory (we won't be working in the default ROS2 workspace!)
-   $ cd src/SIX_DOF_SIMULATION
->>>>>>> main
 b) remove existing build, install, log directories
    $ rm -rf build install log
 c) build the packages
@@ -43,33 +37,19 @@ c) build the packages
    $ colcon build --symlink-install --packages-select fsw
    $ colcon build --symlink-install --packages-select evaluation
 
-<<<<<<< HEAD
 7. Execution
-=======
-6. Execution
->>>>>>> main
    (!!! execute the terminal within SIX_DOF_SIMULATION folder !!!)
 a) $ source install/setup.bash 
 b) $ bash launch.sh
    will automatically launch all the packages, nodes
 
-<<<<<<< HEAD
 8. Changing Parameters (Recommended to use VS Code environment)
-=======
-7. Changing Parameters (Recommended to use VS Code environment)
->>>>>>> main
 Info) all the parameters are connected via launch.xml files
       no need to re-build the packages after changing the parameters within launch files
 Warning) make sure that dynamic & hardware parameters for fsw and simulation packages matches each other
 a) Guidance & Control parameters
    open and modify : /src/SIX_DOF_SIMULATION/src/fsw/launch/fsw_launch.py
 b) Simulation & Visualization parameters
-<<<<<<< HEAD
    open and modify : /src/SIX_DOF_SIMULATION/src/simulator/launch/simulator_launch.py
 c) Evaluation parameters
    open and modify : /src/SIX/DOF_SIMULATION/src/evaluation/launch/evaluation_launch.py
-=======
-   open and modify : /src/SIX_DOF_SIMULATION/src/simulator/launch/simulator.launch.xml
-c) Evaluation parameters
-   open and modify : /src/SIX/DOF_SIMULATION/src/evaluation/launch/evaluation.launch.xml
->>>>>>> main
