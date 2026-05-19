@@ -29,7 +29,7 @@ b) remove existing build, install, log directories
    $ rm -rf build install log
 c) build the packages
    $ colcon build --symlink-install --packages-up-to
-   if above CLI does not work, go back to step 4.b)
+   if above CLI does not work, remove the built /build /install /log directories
    and then try the below commands in the following order
    $ colcon build --symlink-install --packages-select interfaces
    $ colcon build --symlink-install --packages-select eiquadprog
